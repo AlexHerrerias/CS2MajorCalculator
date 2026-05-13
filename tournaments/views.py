@@ -1,13 +1,11 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.db.models import F, Q
-from django.http import JsonResponse, HttpRequest
-from django.views.decorators.http import require_http_methods
-from .models import Tournament, Team, Stage, StageTeam, Match
-from .stage_recalc import recalculate_swiss_stage_state
 import json
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+from .models import Match, Stage, StageTeam, Team, Tournament
+from .stage_recalc import recalculate_swiss_stage_state
+
 
 @require_http_methods(["GET"])
 def get_major_data(request):

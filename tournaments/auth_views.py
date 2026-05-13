@@ -1,12 +1,14 @@
+from urllib.parse import urlencode
+
 import requests
-from django.shortcuts import redirect, render
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.http import JsonResponse
-from urllib.parse import urlencode
+from django.shortcuts import redirect
 
 from .models import UserProfile
+
 
 def twitch_login(request):
     # Redirige al usuario a Twitch para la autorización

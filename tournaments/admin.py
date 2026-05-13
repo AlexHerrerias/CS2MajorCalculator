@@ -1,11 +1,19 @@
 from django.contrib import admin
 from django.utils import timezone
 
+from .fantasy_logic import finalize_fantasy_playoff_picks, finalize_fantasy_stage_picks
 from .models import (
-    Tournament, Team, Stage, StageTeam, Match, MatchUpdateSettings,
-    UserProfile, FantasyPhasePick, FantasyPlayoffPick
+    FantasyPhasePick,
+    FantasyPlayoffPick,
+    Match,
+    MatchUpdateSettings,
+    Stage,
+    StageTeam,
+    Team,
+    Tournament,
+    UserProfile,
 )
-from .fantasy_logic import finalize_fantasy_stage_picks, finalize_fantasy_playoff_picks
+
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):

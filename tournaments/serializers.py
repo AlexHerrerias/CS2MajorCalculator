@@ -1,10 +1,19 @@
-from rest_framework import serializers
-from .models import (
-    Tournament, Team, Stage, StageTeam, Match,
-    UserProfile, FantasyPhasePick, FantasyPlayoffPick
-)
 from django.contrib.auth.models import User
+from django.db.models import Q
+from rest_framework import serializers
+
 from .fantasy_logic import get_low_seed_bonus_teams_ids
+from .models import (
+    FantasyPhasePick,
+    FantasyPlayoffPick,
+    Match,
+    Stage,
+    StageTeam,
+    Team,
+    Tournament,
+    UserProfile,
+)
+
 
 # Serializer para el modelo User de Django (simplificado)
 class UserSerializer(serializers.ModelSerializer):

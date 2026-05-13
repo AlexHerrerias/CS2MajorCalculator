@@ -1,6 +1,15 @@
-from .models import FantasyPhasePick, Stage, StageTeam, Team, UserProfile, FantasyPlayoffPick, Tournament, Match
-from django.db.models import F, Q
 from django.db import transaction
+from django.db.models import F
+
+from .models import (
+    FantasyPhasePick,
+    FantasyPlayoffPick,
+    Match,
+    Stage,
+    StageTeam,
+    Tournament,
+    UserProfile,
+)
 
 # --- Constantes de Puntuación ---
 # Fase de Grupos (Suiza)

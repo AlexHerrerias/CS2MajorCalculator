@@ -1,12 +1,17 @@
-from django.urls import path, include
+from django.urls import path
+
 # from rest_framework.routers import DefaultRouter # No se usa
 from . import views
-from .auth_views import twitch_login, twitch_callback
 from .api_views import (
-    ManageFantasyPhasePicksView, StageFantasyInfoView,
-    ManageFantasyPlayoffPicksView, FantasyLeaderboardView,
-    UserFantasyProfileView, CurrentUserProfileView, TournamentFantasyPlayoffInfoView
+    CurrentUserProfileView,
+    FantasyLeaderboardView,
+    ManageFantasyPhasePicksView,
+    ManageFantasyPlayoffPicksView,
+    StageFantasyInfoView,
+    TournamentFantasyPlayoffInfoView,
+    UserFantasyProfileView,
 )
+from .auth_views import twitch_callback, twitch_login
 
 # router = DefaultRouter() # No se usa
 

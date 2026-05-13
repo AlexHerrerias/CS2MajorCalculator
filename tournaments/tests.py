@@ -1,5 +1,5 @@
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -20,7 +20,6 @@ from .models import (
     Tournament,
     UserProfile,
 )
-
 
 # ---------------------------------------------------------------------------
 # Twitch OAuth (PR #1)
@@ -653,6 +652,7 @@ class TeamWorldRankingAdminTest(TestCase):
 
     def setUp(self):
         from django.contrib.admin.sites import AdminSite
+
         from .admin import TeamAdmin
 
         self.admin = TeamAdmin(Team, AdminSite())
@@ -672,6 +672,7 @@ class TeamWorldRankingAdminTest(TestCase):
 
     def test_save_model_preserves_timestamp_when_ranking_unchanged(self):
         from datetime import timedelta
+
         from django.utils import timezone
 
         original = timezone.now() - timedelta(days=1)

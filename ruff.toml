@@ -17,7 +17,10 @@ select = [
 ignore = [
     "E501",  # line-too-long is handled by the formatter
     "B008",  # function-call-in-default-argument (Django patterns)
+    "E701",  # multiple statements on one line (legacy Django code uses `if x: return y`)
+    "B007",  # loop control variable not used (legacy)
 ]
 
 [lint.per-file-ignores]
 "tournaments/tests.py" = ["B017"]  # asserting on the broad exception type is fine in tests
+"tournaments/migrations/*" = ["I001"]  # auto-generated migrations don't need import sorting

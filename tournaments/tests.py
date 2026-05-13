@@ -465,6 +465,189 @@ class MatchResultRecalcTest(TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Swiss Buchholz simulation (audit)
+# ---------------------------------------------------------------------------
+
+class SwissBuchholzSimulationTest(TestCase):
+    """End-to-end simulation of a small Swiss stage.
+
+    4 teams, 3 rounds, every team plays every other exactly once (a closed
+    schedule that doubles as a check that no team is paired twice).
+
+    R1: T1 > T2 ; T3 > T4
+        Standings after R1: T1 1-0, T2 0-1, T3 1-0, T4 0-1
+    R2: T1 > T3 ; T2 > T4
+        Standings after R2: T1 2-0, T2 1-1, T3 1-1, T4 0-2
+    R3: T2 > T3 ; T1 > T4
+        Standings after R3: T1 3-0, T2 2-1, T3 1-2, T4 0-3
+
+    The simulation drives the public `/api/tournament/update-match/` endpoint
+    (the same the frontend uses) so the recompute path in views.py is exercised
+    end-to-end, not just the model.
+    """
+
+    def setUp(self):
+        self.tournament = Tournament.objects.create(
+            name="Swiss Sim",
+            slug="swiss-sim",
+            start_date="2024-01-01",
+            end_date="2024-01-10",
+            location="Online",
+            is_live=True,
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Swiss A",
+            type="SWISS",
+            order=1,
+        )
+        self.teams = []
+        for i in range(1, 5):
+            team = Team.objects.create(name=f"T{i}", region="EU")
+            self.teams.append(team)
+            StageTeam.objects.create(stage=self.stage, team=team, initial_seed=i)
+
+        # Three rounds with two matches each, pairings chosen so no team plays
+        # the same opponent twice.
+        pairings_by_round = {
+            1: [(0, 1), (2, 3)],  # T1 vs T2, T3 vs T4
+            2: [(0, 2), (1, 3)],  # T1 vs T3, T2 vs T4
+            3: [(1, 2), (0, 3)],  # T2 vs T3, T1 vs T4
+        }
+        self.matches_by_round = {}
+        for round_number, pairings in pairings_by_round.items():
+            self.matches_by_round[round_number] = []
+            for a, b in pairings:
+                match = Match.objects.create(
+                    stage=self.stage,
+                    round_number=round_number,
+                    team1=self.teams[a],
+                    team2=self.teams[b],
+                    format="BO3",
+                    status="PENDING",
+                )
+                self.matches_by_round[round_number].append(match)
+
+        self.url = reverse("update-match")
+
+    # -- helpers -----------------------------------------------------------
+
+    def _post_winner(self, round_number: int, match_index_in_round: int, winner: Team):
+        payload = {
+            "tournamentSlug": self.tournament.slug,
+            "currentStageIdFromPage": f"phase{self.stage.order}",
+            "roundIndex": round_number - 1,
+            "matchIndex": match_index_in_round,
+            "winnerId": winner.id,
+        }
+        response = self.client.post(
+            self.url, data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+
+    def _record_for(self, team: Team) -> tuple[int, int]:
+        st = StageTeam.objects.get(stage=self.stage, team=team)
+        return (st.wins, st.losses)
+
+    # -- the simulation ----------------------------------------------------
+
+    def test_three_round_swiss_recalculates_wins_losses(self):
+        t1, t2, t3, t4 = self.teams
+
+        # --- Round 1 ---
+        self._post_winner(round_number=1, match_index_in_round=0, winner=t1)
+        self._post_winner(round_number=1, match_index_in_round=1, winner=t3)
+        self.assertEqual(self._record_for(t1), (1, 0))
+        self.assertEqual(self._record_for(t2), (0, 1))
+        self.assertEqual(self._record_for(t3), (1, 0))
+        self.assertEqual(self._record_for(t4), (0, 1))
+
+        # --- Round 2 ---
+        self._post_winner(round_number=2, match_index_in_round=0, winner=t1)
+        self._post_winner(round_number=2, match_index_in_round=1, winner=t2)
+        self.assertEqual(self._record_for(t1), (2, 0))
+        self.assertEqual(self._record_for(t2), (1, 1))
+        self.assertEqual(self._record_for(t3), (1, 1))
+        self.assertEqual(self._record_for(t4), (0, 2))
+
+        # --- Round 3 ---
+        self._post_winner(round_number=3, match_index_in_round=0, winner=t2)
+        self._post_winner(round_number=3, match_index_in_round=1, winner=t1)
+        self.assertEqual(self._record_for(t1), (3, 0))
+        self.assertEqual(self._record_for(t2), (2, 1))
+        self.assertEqual(self._record_for(t3), (1, 2))
+        self.assertEqual(self._record_for(t4), (0, 3))
+
+    def test_changing_a_winner_reverts_then_reapplies(self):
+        """The endpoint resets W/L for the whole stage on every call, so flipping
+        a result in a previous round must leave every team's record consistent."""
+        t1, t2, t3, t4 = self.teams
+
+        self._post_winner(round_number=1, match_index_in_round=0, winner=t1)
+        self._post_winner(round_number=1, match_index_in_round=1, winner=t3)
+        self._post_winner(round_number=2, match_index_in_round=0, winner=t1)
+        self.assertEqual(self._record_for(t1), (2, 0))
+        self.assertEqual(self._record_for(t3), (1, 1))
+
+        # Operator realises they entered the wrong winner in R1 match 0 and flips
+        # it: T2 should now have one win instead of T1.
+        self._post_winner(round_number=1, match_index_in_round=0, winner=t2)
+
+        # T1 only has its R2 victory now; T2 has its newly attributed R1 win.
+        self.assertEqual(self._record_for(t1), (1, 1))
+        self.assertEqual(self._record_for(t2), (1, 0))
+        self.assertEqual(self._record_for(t3), (1, 1))
+        self.assertEqual(self._record_for(t4), (0, 1))
+
+    def test_match_without_winner_is_not_counted(self):
+        """PENDING matches must not contribute to W/L; only FINISHED ones do."""
+        t1, _t2, t3, _t4 = self.teams
+
+        # Only one of the two R1 matches has a result.
+        self._post_winner(round_number=1, match_index_in_round=0, winner=t1)
+
+        # The unsubmitted match is still PENDING.
+        pending = self.matches_by_round[1][1]
+        pending.refresh_from_db()
+        self.assertEqual(pending.status, "PENDING")
+        self.assertIsNone(pending.winner_id)
+
+        self.assertEqual(self._record_for(t1), (1, 0))
+        # T3 and T4 haven't been involved in any FINISHED match yet.
+        self.assertEqual(self._record_for(t3), (0, 0))
+        self.assertEqual(self._record_for(_t4), (0, 0))
+
+    def test_buchholz_score_field_is_never_written_by_backend(self):
+        """Document a real gap: the backend never computes StageTeam.buchholz_score.
+
+        The frontend uses it as the third tiebreaker when selecting the top-8
+        qualified teams (`BuchholzRounds.tsx`), but right now it stays at the
+        default 0.0 for every team forever — so the tiebreaker is a no-op in
+        practice. This test asserts the current behavior so any future fix is
+        forced to update it.
+        """
+        t1, t2, t3, t4 = self.teams
+        self._post_winner(round_number=1, match_index_in_round=0, winner=t1)
+        self._post_winner(round_number=1, match_index_in_round=1, winner=t3)
+        self._post_winner(round_number=2, match_index_in_round=0, winner=t1)
+        self._post_winner(round_number=2, match_index_in_round=1, winner=t2)
+        self._post_winner(round_number=3, match_index_in_round=0, winner=t2)
+        self._post_winner(round_number=3, match_index_in_round=1, winner=t1)
+
+        for team in (t1, t2, t3, t4):
+            st = StageTeam.objects.get(stage=self.stage, team=team)
+            self.assertEqual(
+                st.buchholz_score,
+                0.0,
+                msg=(
+                    f"{team.name}: buchholz_score is still 0.0. When the "
+                    "backend grows a real Buchholz computation, update this "
+                    "test with the expected values."
+                ),
+            )
+
+
+# ---------------------------------------------------------------------------
 # Team world ranking (PR #3)
 # ---------------------------------------------------------------------------
 

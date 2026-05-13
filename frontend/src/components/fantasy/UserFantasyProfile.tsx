@@ -238,7 +238,7 @@ const UserFantasyProfile: React.FC = () => {
   };
 
   const commonPageClasses = "min-h-[calc(100vh-4rem)] relative isolate bg-black text-white";
-  const commonContainerClasses = "relative z-10 max-w-6xl mx-auto p-4 sm:p-8 pt-8";
+  const commonContainerClasses = "relative z-10 max-w-6xl mx-auto p-3 sm:p-8 pt-6 sm:pt-8";
 
   if (isLoading) {
     return (
@@ -281,33 +281,33 @@ const UserFantasyProfile: React.FC = () => {
     <div className={commonPageClasses}>
       <GridPattern />
       <div className={commonContainerClasses}>
-        <header className="mb-10 flex flex-col sm:flex-row items-center sm:items-end justify-between">
-          <div className="flex items-center mb-4 sm:mb-0">
+        <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4">
+          <div className="flex items-center">
             {profileData.twitch_profile_image_url ? (
-              <img 
-                src={profileData.twitch_profile_image_url} 
-                alt={profileData.twitch_username || profileData.user.username} 
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-primary-500 shadow-lg"
+              <img
+                src={profileData.twitch_profile_image_url}
+                alt={profileData.twitch_username || profileData.user.username}
+                className="w-16 h-16 sm:w-24 sm:h-24 rounded-full border-4 border-primary-500 shadow-lg"
               />
             ) : (
-              <UserCircleIconSVG className="w-20 h-20 sm:w-24 sm:h-24 text-neutral-600 border-4 border-neutral-700 rounded-full p-1" />
+              <UserCircleIconSVG className="w-16 h-16 sm:w-24 sm:h-24 text-neutral-600 border-4 border-neutral-700 rounded-full p-1" />
             )}
-            <div className="ml-4 sm:ml-6">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+            <div className="ml-3 sm:ml-6">
+              <h1 className="text-fluid-2xl font-bold text-white">
                 {profileData.twitch_username || profileData.user.username}
               </h1>
               {profileData.twitch_username && profileData.user.username !== profileData.twitch_username && (
-                <p className="text-sm text-neutral-400">@{profileData.user.username}</p>
+                <p className="text-fluid-xs text-neutral-400">@{profileData.user.username}</p>
               )}
-              <p className="text-lg text-neutral-300 flex items-center mt-1">
+              <p className="text-fluid-base text-neutral-300 flex flex-wrap items-center mt-1">
                 <TrophyIconSVG className="w-5 h-5 mr-2 text-secondary-400" />
-                Puntos Totales: <span className="font-bold text-xl ml-1 text-secondary-300">{profileData.total_fantasy_points}</span>
+                Puntos: <span className="font-bold text-fluid-lg ml-1 text-secondary-300 tabular-nums">{profileData.total_fantasy_points}</span>
               </p>
             </div>
           </div>
-          <RouterLink 
-            to="/fantasy/leaderboard" 
-            className="px-4 py-2 text-sm font-medium text-neutral-200 bg-neutral-700 hover:bg-neutral-600 rounded-md transition-colors flex items-center self-start sm:self-auto"
+          <RouterLink
+            to="/fantasy/leaderboard"
+            className="w-full sm:w-auto px-4 py-2 text-fluid-sm font-medium text-neutral-200 bg-neutral-700 hover:bg-neutral-600 rounded-md transition-colors flex items-center justify-center self-stretch sm:self-auto"
           >
             <ArrowLeftIconSVG className="w-4 h-4 mr-2" />
             Volver al Leaderboard
@@ -315,8 +315,8 @@ const UserFantasyProfile: React.FC = () => {
         </header>
 
         <section>
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-white flex items-center mb-4 sm:mb-0">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-fluid-xl font-semibold text-white flex items-center mb-3 sm:mb-0">
               <CalendarDaysIconSVG className="w-7 h-7 mr-3 text-primary-400" />
               Historial de Picks
             </h2>
@@ -336,11 +336,11 @@ const UserFantasyProfile: React.FC = () => {
           )}
 
           {selectedPickRenderData ? (
-            <div className="my-6">
-              <h3 className="text-xl font-bold text-center text-neutral-100 mb-1">
+            <div className="my-4 sm:my-6">
+              <h3 className="text-fluid-lg font-bold text-center text-neutral-100 mb-1">
                 {selectedPickRenderData.name}
               </h3>
-              <p className="text-sm text-neutral-400 text-center mb-4">
+              <p className="text-fluid-sm text-neutral-400 text-center mb-4">
                 Puntos Obtenidos: <span className="font-bold text-secondary-400">{selectedPickRenderData.data.points_earned}</span>
               </p>
               {selectedPickRenderData.type === 'phase' && (

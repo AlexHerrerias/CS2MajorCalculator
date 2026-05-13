@@ -56,7 +56,7 @@ function getCookie(name: string): string | null {
 }
 
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || '/api/v1'
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1'
 });
 
 // Obtener el token CSRF de las cookies (Django usa 'csrftoken' por defecto)
@@ -129,7 +129,7 @@ export const getCurrentUserProfile = async (): Promise<TwitchUserProfile | null>
 };
 
 export const twitchLogin = () => {
-  window.location.href = `${process.env.REACT_APP_API_BASE_URL || '/api/v1'}/auth/twitch/login/`;
+  window.location.href = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/twitch/login/`;
 };
 
 export const logoutUser = async (): Promise<void> => {

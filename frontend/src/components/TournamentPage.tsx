@@ -51,17 +51,20 @@ const TournamentPage: React.FC<TournamentPageProps> = () => {
     
     const stageIdBeforeUpdate = currentStageId; // Guardar el stage actual
 
-    const updatedTournamentData = await updateMatchResult(roundIndex, matchIndex, winnerId, slug, currentStageId);
-    
-    // Actualizar el estado local con los datos completos devueltos
-    if (updatedTournamentData) {
+    const updatedTournamentDataRaw = await updateMatchResult(roundIndex, matchIndex, winnerId, slug, currentStageId);
+
+    // The service mutates and returns the same object reference; clone the wrapper so
+    // React detects the change and re-renders.
+    if (updatedTournamentDataRaw) {
+      const updatedTournamentData = {
+        ...updatedTournamentDataRaw,
+        stages: { ...updatedTournamentDataRaw.stages },
+      };
       setTournamentData(updatedTournamentData);
-      // Asegurarse de que el stageId visual no cambie si el avance es dentro de la misma fase
       if (stageIdBeforeUpdate && updatedTournamentData.stages[stageIdBeforeUpdate]) {
         setCurrentStageId(stageIdBeforeUpdate);
       } else {
-        // Si la fase cambiara (improbable en playoffs), usar la nueva
-        setCurrentStageId(updatedTournamentData.currentStage); 
+        setCurrentStageId(updatedTournamentData.currentStage);
       }
     }
   };

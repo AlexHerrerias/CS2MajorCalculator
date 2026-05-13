@@ -41,17 +41,19 @@ const Home: React.FC = () => {
     const stageIdBeforeUpdate = currentStageId;
 
     const updatedTournamentData = await updateMatchResult(roundIndex, matchIndex, winnerId, null, currentStageId);
-    
-    // Actualizar el estado local con los datos completos devueltos
+
+    // Actualizar el estado local con los datos completos devueltos. The service mutates and
+    // returns the same object reference, so React's shallow-equality bail-out skips the
+    // render — clone the wrapper to force a fresh reference.
     if (updatedTournamentData) {
-      setTournamentData(updatedTournamentData);
+      setTournamentData({ ...updatedTournamentData, stages: { ...updatedTournamentData.stages } });
       // Asegurarse de que el stageId visual no cambie si el avance es dentro de la misma fase
       if (stageIdBeforeUpdate && updatedTournamentData.stages[stageIdBeforeUpdate]) {
         setCurrentStageId(stageIdBeforeUpdate);
       } else {
         setCurrentStageId(updatedTournamentData.currentStage);
       }
-    } 
+    }
   };
 
   const handleStageChange = async (stageId: string): Promise<void> => {

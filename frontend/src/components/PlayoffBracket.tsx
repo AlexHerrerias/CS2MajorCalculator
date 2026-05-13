@@ -1,275 +1,324 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Team, Match, Round } from '../types/hltvTypes';
+import React from "react";
+import { Match, Round, Team } from "../types/hltvTypes";
 
 interface PlayoffBracketProps {
   teams: Team[];
-  rounds: Round[]; // Asumimos que rounds[0]=QF, rounds[1]=SF, rounds[2]=Final
+  rounds: Round[]; // rounds[0] = QF, rounds[1] = SF, rounds[2] = Final
   onMatchResult: (roundIndex: number, matchIndex: number, winnerId: number) => void;
 }
 
-interface Coords {
-  x: number;
-  y: number;
+// ---------- helpers ---------------------------------------------------------
+
+const logoSrcFor = (teamName: string | undefined): string => {
+  if (!teamName) return "/team-logos/default.png";
+  const slug = teamName.toLowerCase().replace(/\s+/g, "").replace(/[^\w-]/g, "");
+  return `/team-logos/${slug}.png`;
+};
+
+const fallbackLogo = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  (e.target as HTMLImageElement).src = "/team-logos/default.png";
+};
+
+const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ");
+
+// ---------- TeamRow (compact) -----------------------------------------------
+
+interface TeamRowProps {
+  team: Team | undefined;
+  score: number | undefined;
+  isWinner: boolean;
+  isLoser: boolean;
+  isFinished: boolean;
+  onPick: () => void;
 }
 
-interface MatchPositions {
-  [matchKey: string]: {
-    input?: Coords; // Punto de entrada (para rondas > 0)
-    output?: Coords; // Punto de salida (para rondas < final)
-    element: HTMLDivElement | null;
-  };
-}
-
-const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ teams, rounds, onMatchResult }) => {
-  const getTeamById = (id: number | null | undefined): Team | undefined => {
-    if (!id) return undefined;
-    return teams.find(team => team.id === id);
-  };
-
-  const quarterfinals = rounds[0]?.matches || [];
-  const semifinals = rounds[1]?.matches || [];
-  const finalMatch = rounds[2]?.matches[0] || null;
-
-  const bracketRef = useRef<HTMLDivElement>(null);
-  const matchElementsRef = useRef<MatchPositions>({});
-  const [svgLines, setSvgLines] = useState<React.JSX.Element[]>([]);
-
-  // Efecto para calcular y dibujar las líneas SVG
-  useEffect(() => {
-    if (!bracketRef.current || Object.keys(matchElementsRef.current).length === 0) return;
-    const bracketContainerRect = bracketRef.current.getBoundingClientRect();
-    const newLines: React.JSX.Element[] = [];
-
-    const getMatchKey = (roundIndex: number, matchIndex: number) => `r${roundIndex}m${matchIndex}`;
-
-    // Calcular puntos de salida y entrada para cada partido visible
-    Object.keys(matchElementsRef.current).forEach(key => {
-      const matchRef = matchElementsRef.current[key];
-      if (matchRef.element) {
-        const rect = matchRef.element.getBoundingClientRect();
-        // Coordenadas relativas al bracketRef
-        const relativeTop = rect.top - bracketContainerRect.top;
-        const relativeLeft = rect.left - bracketContainerRect.left;
-
-        matchRef.output = { x: relativeLeft + rect.width, y: relativeTop + rect.height / 2 };
-        matchRef.input = { x: relativeLeft, y: relativeTop + rect.height / 2 };
-      }
-    });
-    
-    // Conectores QF -> SF (Lado Izquierdo)
-    if (semifinals[0]) {
-      const sf0Key = getMatchKey(1, 0);
-      const sf0Pos = matchElementsRef.current[sf0Key]?.input;
-      if (sf0Pos) {
-        [0, 1].forEach(qfIndex => { // QF0 y QF1 van a SF0
-          const qfKey = getMatchKey(0, qfIndex);
-          const qfPos = matchElementsRef.current[qfKey]?.output;
-          if (qfPos && sf0Pos) {
-            const midX = qfPos.x + (sf0Pos.x - qfPos.x) / 2;
-            newLines.push(
-              <path
-                key={`line-qf${qfIndex}-sf0`}
-                d={`M ${qfPos.x} ${qfPos.y} L ${midX} ${qfPos.y} L ${midX} ${sf0Pos.y} L ${sf0Pos.x} ${sf0Pos.y}`}
-                stroke="rgba(100, 116, 139, 0.7)"
-                strokeWidth="2"
-                fill="none"
-              />
-            );
-          }
-        });
-      }
-    }
-
-    // Conectores QF -> SF (Lado Derecho)
-    if (semifinals[1]) {
-      const sf1Key = getMatchKey(1, 1);
-      const sf1Pos = matchElementsRef.current[sf1Key]?.input;
-      if (sf1Pos) {
-        [2, 3].forEach(qfIndex => { // QF2 y QF3 van a SF1
-          const qfKey = getMatchKey(0, qfIndex);
-          const qfPos = matchElementsRef.current[qfKey]?.output;
-          if (qfPos && sf1Pos) {
-            const midX = qfPos.x + (sf1Pos.x - qfPos.x) / 2;
-            newLines.push(
-              <path
-                key={`line-qf${qfIndex}-sf1`}
-                d={`M ${qfPos.x} ${qfPos.y} L ${midX} ${qfPos.y} L ${midX} ${sf1Pos.y} L ${sf1Pos.x} ${sf1Pos.y}`}
-                stroke="rgba(100, 116, 139, 0.7)"
-                strokeWidth="2"
-                fill="none"
-              />
-            );
-          }
-        });
-      }
-    }
-    
-    // Conectores SF -> Final
-    if (finalMatch) {
-      const finalKey = getMatchKey(2, 0);
-      const finalPos = matchElementsRef.current[finalKey]?.input;
-      if (finalPos) {
-        [0, 1].forEach(sfIndex => { // SF0 y SF1 van a la Final
-          const sfKey = getMatchKey(1, sfIndex);
-          const sfOutputPos = matchElementsRef.current[sfKey]?.output;
-          if (sfOutputPos && finalPos) {
-            const midX = sfOutputPos.x + (finalPos.x - sfOutputPos.x) / 2;
-            newLines.push(
-              <path
-                key={`line-sf${sfIndex}-final`}
-                d={`M ${sfOutputPos.x} ${sfOutputPos.y} L ${midX} ${sfOutputPos.y} L ${midX} ${finalPos.y} L ${finalPos.x} ${finalPos.y}`}
-                stroke="rgba(100, 116, 139, 0.7)"
-                strokeWidth="2"
-                fill="none"
-              />
-            );
-          }
-        });
-      }
-    }
-
-    setSvgLines(newLines);
-  }, [teams, rounds, quarterfinals, semifinals, finalMatch, matchElementsRef.current]);
-
-
-  const TeamDisplay: React.FC<{ 
-    teamId: number | null | undefined, 
-    isWinner?: boolean, 
-    matchStatus?: Match['status'], 
-    onClick?: () => void
-  }> = 
-    ({ teamId, isWinner, matchStatus, onClick }) => {
-    const team = getTeamById(teamId);
-    const logoUrl = team ? `/team-logos/${team.name.toLowerCase().replace(/\s+/g, '')}.png` : '/team-logos/default.png';
-    const teamName = team ? team.name : 'TBD';
-
-    let teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-neutral-800 hover:bg-neutral-700 cursor-pointer transition-all group';
-    let logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain group-hover:scale-105 transition-transform';
-    let nameClasses = 'text-fluid-sm text-neutral-400 mt-2 truncate group-hover:text-neutral-200';
-
-    if (matchStatus === 'FINISHED') {
-      teamClasses = onClick ? teamClasses.replace('cursor-pointer', 'cursor-default') : teamClasses;
-      if (isWinner) {
-        teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-primary-600 border-2 border-primary-400 cursor-default transition-all group';
-        logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain scale-105 brightness-110';
-        nameClasses = 'text-fluid-sm text-white mt-2 truncate';
-      } else {
-        teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-neutral-800 opacity-60 grayscale cursor-default transition-all group';
-        logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain';
-        nameClasses = 'text-fluid-sm text-neutral-500 mt-2 truncate';
-      }
-    } else if (isWinner) { // Ganador simulado
-        teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-primary-700 hover:bg-primary-600 border-2 border-primary-500 cursor-pointer transition-all group';
-        logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain scale-105 group-hover:scale-110 transition-transform';
-        nameClasses = 'text-fluid-sm text-primary-200 mt-2 truncate group-hover:text-white';
-    }
-    
-    return (
-      <div title={teamName} className={teamClasses} onClick={matchStatus !== 'FINISHED' && teamId ? onClick : undefined}>
-        <div className="flex flex-col items-center justify-center relative">
-          {matchStatus === 'LIVE' && (
-            <span className="absolute top-0 right-0 -mt-1 -mr-1 px-1.5 py-0.5 bg-danger-500 text-white text-[10px] font-bold rounded-full animate-pulse z-20">LIVE</span>
+const TeamRow: React.FC<TeamRowProps> = ({
+  team,
+  score,
+  isWinner,
+  isLoser,
+  isFinished,
+  onPick,
+}) => {
+  const isClickable = !isFinished && Boolean(team);
+  const isTBD = !team;
+  return (
+    <button
+      type="button"
+      disabled={!isClickable}
+      onClick={isClickable ? onPick : undefined}
+      className={cx(
+        "group w-full flex items-center gap-2 px-3 py-2 text-left transition-colors",
+        isClickable ? "cursor-pointer hover:bg-primary-500/20" : "cursor-default",
+        isWinner && !isLoser && "bg-primary-600/25",
+      )}
+    >
+      {team ? (
+        <img
+          src={logoSrcFor(team.name)}
+          alt=""
+          className={cx(
+            "h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 object-contain",
+            isLoser && "grayscale opacity-60",
           )}
-          <img src={logoUrl} alt={teamName} className={logoClasses} onError={(e) => {(e.target as HTMLImageElement).src = '/team-logos/default.png'}} />
-          {team && <span className={nameClasses}>{team.name}</span>}
-          {!team && <span className={nameClasses}>TBD</span>}
-        </div>
-      </div>
-    );
-  };
-
-  const MatchDisplay: React.FC<{ match: Match | undefined, roundIndex: number, matchIndex: number, className?: string }> = 
-  ({ match, roundIndex, matchIndex, className }) => {
-    const matchKey = `r${roundIndex}m${matchIndex}`;
-    
-    const handleTeamClick = (selectedTeamId: number | null | undefined) => {
-      if (selectedTeamId && match && match.status !== 'FINISHED') {
-        onMatchResult(roundIndex, matchIndex, selectedTeamId);
-      }
-    };
-    
-    return (
-      <div 
-        ref={el => {
-          if (el) matchElementsRef.current[matchKey] = { ...matchElementsRef.current[matchKey], element: el };
-        }}
-        className={`w-32 sm:w-40 md:w-48 flex flex-col gap-0.5 bg-neutral-900/70 rounded-md shadow-xl border border-neutral-700/50 overflow-hidden ${className}`}
+          onError={fallbackLogo}
+        />
+      ) : (
+        <span className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 rounded bg-neutral-800/70 grid place-items-center text-neutral-700 text-xs">
+          ?
+        </span>
+      )}
+      <span
+        className={cx(
+          "flex-1 min-w-0 truncate text-fluid-sm",
+          isTBD ? "text-neutral-600 italic" : isWinner ? "text-white font-semibold" : isLoser ? "text-neutral-500" : "text-neutral-200",
+        )}
       >
-        <TeamDisplay 
-          teamId={match?.team1Id} 
-          isWinner={match?.winner === match?.team1Id} 
-          matchStatus={match?.status} 
-          onClick={() => handleTeamClick(match?.team1Id)}
-        />
-        <TeamDisplay 
-          teamId={match?.team2Id} 
-          isWinner={match?.winner === match?.team2Id} 
-          matchStatus={match?.status} 
-          onClick={() => handleTeamClick(match?.team2Id)}
-        />
-      </div>
-    );
+        {team ? team.name : "TBD"}
+      </span>
+      <span
+        className={cx(
+          "min-w-[1rem] text-right font-mono tabular-nums text-fluid-sm",
+          isWinner ? "text-white font-semibold" : "text-neutral-600",
+        )}
+      >
+        {typeof score === "number" ? score : "—"}
+      </span>
+    </button>
+  );
+};
+
+// ---------- MatchCard -------------------------------------------------------
+
+interface MatchCardProps {
+  match: Match | undefined;
+  roundIndex: number;
+  matchIndex: number;
+  teams: Team[];
+  onPickWinner: (roundIndex: number, matchIndex: number, winnerId: number) => void;
+  emphasize?: boolean;
+}
+
+const MatchCard: React.FC<MatchCardProps> = ({
+  match,
+  roundIndex,
+  matchIndex,
+  teams,
+  onPickWinner,
+  emphasize,
+}) => {
+  const t1 = match ? teams.find((t) => t.id === match.team1Id) : undefined;
+  const t2 = match ? teams.find((t) => t.id === match.team2Id) : undefined;
+  const isFinished = match?.status === "FINISHED";
+  const isLive = match?.status === "LIVE";
+  const winnerId = match?.winner ?? null;
+
+  const pick = (id: number | undefined) => {
+    if (!id || !match || isFinished) return;
+    onPickWinner(roundIndex, matchIndex, id);
   };
-  
-  const champion = finalMatch?.winner ? getTeamById(finalMatch.winner) : null;
 
   return (
-    <div ref={bracketRef} className="relative flex justify-center items-start p-3 sm:p-4 md:p-8 min-h-[600px] md:min-h-[900px] text-white overflow-x-auto select-none">
-      <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 hidden md:block">
-        {svgLines}
+    <article
+      className={cx(
+        "relative w-full rounded-md overflow-hidden border bg-neutral-900/80 shadow-sm",
+        emphasize ? "border-primary-500/60 shadow-lg shadow-primary-900/30" : "border-neutral-800",
+      )}
+    >
+      {isLive && (
+        <span className="absolute top-1 right-1 z-10 px-1.5 py-0.5 bg-danger-500 text-white text-[9px] font-bold rounded-full animate-pulse">
+          LIVE
+        </span>
+      )}
+      <div className="divide-y divide-neutral-800">
+        <TeamRow
+          team={t1}
+          score={match?.team1Score}
+          isWinner={winnerId !== null && winnerId === match?.team1Id}
+          isLoser={winnerId !== null && winnerId !== match?.team1Id}
+          isFinished={isFinished}
+          onPick={() => pick(t1?.id)}
+        />
+        <TeamRow
+          team={t2}
+          score={match?.team2Score}
+          isWinner={winnerId !== null && winnerId === match?.team2Id}
+          isLoser={winnerId !== null && winnerId !== match?.team2Id}
+          isFinished={isFinished}
+          onPick={() => pick(t2?.id)}
+        />
+      </div>
+    </article>
+  );
+};
+
+// ---------- ChampionCard ----------------------------------------------------
+
+const ChampionCard: React.FC<{ champion: Team | null }> = ({ champion }) => (
+  <div
+    className={cx(
+      "relative overflow-hidden rounded-lg border-2 p-4 text-center transition-all",
+      champion
+        ? "border-yellow-400/80 bg-gradient-to-br from-yellow-500/30 via-amber-700/15 to-neutral-900 shadow-lg shadow-yellow-500/20"
+        : "border-neutral-800 bg-neutral-900/70",
+    )}
+  >
+    <p
+      className={cx(
+        "text-[10px] font-bold tracking-[0.3em] uppercase mb-2 flex items-center justify-center gap-1.5",
+        champion ? "text-yellow-300" : "text-neutral-600",
+      )}
+    >
+      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path d="M5 4h14v2h2v3a4 4 0 01-4 4h-.5a5.5 5.5 0 01-5 4.49V20h3v2H9v-2h3v-2.51A5.5 5.5 0 017.5 13H7a4 4 0 01-4-4V6h2V4zm0 4v1a2 2 0 002 2V8H5zm14 0h-2v3a2 2 0 002-2V8z" />
       </svg>
-
-      <div className="relative z-10 flex space-x-3 sm:space-x-6 md:space-x-12 items-stretch">
-        {/* Columna Cuartos de Final Izquierda */}
-        <div className="flex flex-col justify-around items-center space-y-6 sm:space-y-10 pt-6 sm:pt-10">
-          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-0">Cuartos (A)</h3>
-          <MatchDisplay match={quarterfinals[0]} roundIndex={0} matchIndex={0} />
-          <MatchDisplay match={quarterfinals[1]} roundIndex={0} matchIndex={1} />
+      Campeón
+    </p>
+    {champion ? (
+      <>
+        <img
+          src={logoSrcFor(champion.name)}
+          alt={champion.name}
+          className="w-14 h-14 sm:w-16 sm:h-16 object-contain mx-auto mb-2 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]"
+          onError={fallbackLogo}
+        />
+        <p className="text-fluid-base font-bold text-white truncate">{champion.name}</p>
+        <p className="text-fluid-xs text-yellow-200/70 mt-1">Seed #{champion.seed ?? "?"}</p>
+      </>
+    ) : (
+      <div className="py-3">
+        <div className="w-12 h-12 mx-auto rounded-full bg-neutral-800/80 grid place-items-center text-2xl text-neutral-700 font-mono">
+          ?
         </div>
+        <p className="text-fluid-xs text-neutral-500 mt-2">Por decidir</p>
+      </div>
+    )}
+  </div>
+);
 
-        {/* Columna Semifinal Izquierda */}
-        <div className="flex flex-col justify-center items-center pt-24 sm:pt-40">
-          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-20 sm:top-32">Semifinal (A)</h3>
-          <MatchDisplay match={semifinals[0]} roundIndex={1} matchIndex={0} />
-        </div>
+// ---------- Column wrapper --------------------------------------------------
 
-        {/* Columna Final */}
-        <div className="flex flex-col items-center space-y-4 pt-12 sm:pt-20 md:pt-48">
-          <h3 className="text-fluid-lg font-bold text-primary-400 mb-2 absolute top-8 sm:top-12 md:top-40">FINAL</h3>
-          {finalMatch && <MatchDisplay match={finalMatch} roundIndex={2} matchIndex={0} />}
-          <div className="mt-10 sm:mt-16 text-center p-4 sm:p-6 bg-neutral-800 rounded-xl shadow-2xl border-2 border-yellow-400/80 w-44 sm:w-56 md:w-64 min-h-[180px] sm:min-h-[220px] md:min-h-[250px] flex flex-col justify-center">
-            <h4 className="text-fluid-xl font-bold text-yellow-400 mb-3">CAMPEÓN</h4>
-            {champion ? (
-              <>
-                <img
-                  src={`/team-logos/${champion.name.toLowerCase().replace(/\s+/g, '')}.png`}
-                  alt={champion.name}
-                  className="w-20 h-24 sm:w-24 sm:h-28 md:w-30 md:h-36 mx-auto my-4 object-contain filter drop-shadow(0 0 10px rgba(250, 204, 21, 0.6))"
-                  onError={(e) => {(e.target as HTMLImageElement).src = '/team-logos/default.png'}}
-                />
-                <p className="text-fluid-2xl font-semibold text-white truncate">{champion.name}</p>
-              </>
-            ) : (
-              <p className="text-fluid-2xl font-semibold text-neutral-500 h-24 md:h-36 flex items-center justify-center">TBD</p>
-            )}
+interface ColumnProps {
+  title: string;
+  justify: "between" | "around" | "center";
+  children: React.ReactNode;
+  widthClass?: string;
+}
+
+const Column: React.FC<ColumnProps> = ({ title, justify, children, widthClass = "w-44 lg:w-52" }) => (
+  <div className={cx("flex flex-col flex-shrink-0", widthClass)}>
+    <h3 className="text-[11px] font-bold tracking-[0.3em] uppercase text-neutral-400 text-center mb-4">
+      {title}
+    </h3>
+    <div
+      className={cx(
+        "flex-1 flex flex-col gap-3",
+        justify === "between" && "justify-between",
+        justify === "around" && "justify-around",
+        justify === "center" && "justify-center",
+      )}
+    >
+      {children}
+    </div>
+  </div>
+);
+
+// ---------- Main ------------------------------------------------------------
+
+const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ teams, rounds, onMatchResult }) => {
+  const qf = rounds[0]?.matches || [];
+  const sf = rounds[1]?.matches || [];
+  const finalMatch = rounds[2]?.matches?.[0];
+
+  const champion: Team | null =
+    finalMatch && finalMatch.winner !== null
+      ? teams.find((t) => t.id === finalMatch.winner) || null
+      : null;
+
+  const renderMatch = (
+    m: Match | undefined,
+    roundIndex: number,
+    matchIndex: number,
+    emphasize = false,
+  ) => (
+    <MatchCard
+      match={m}
+      roundIndex={roundIndex}
+      matchIndex={matchIndex}
+      teams={teams}
+      onPickWinner={onMatchResult}
+      emphasize={emphasize}
+    />
+  );
+
+  return (
+    <div className="w-full">
+      {/* ============== DESKTOP — horizontal 4-column bracket ============== */}
+      <div className="hidden md:flex md:items-stretch md:justify-center md:gap-8 lg:gap-12 md:min-h-[460px]">
+        <Column title="Cuartos" justify="between">
+          {renderMatch(qf[0], 0, 0)}
+          {renderMatch(qf[1], 0, 1)}
+          {renderMatch(qf[2], 0, 2)}
+          {renderMatch(qf[3], 0, 3)}
+        </Column>
+
+        <Column title="Semifinales" justify="around">
+          {renderMatch(sf[0], 1, 0)}
+          {renderMatch(sf[1], 1, 1)}
+        </Column>
+
+        <Column title="Final" justify="center">
+          {finalMatch ? (
+            renderMatch(finalMatch, 2, 0, true)
+          ) : (
+            <p className="text-fluid-xs text-neutral-600 italic text-center">Pendiente</p>
+          )}
+        </Column>
+
+        <Column title="Campeón" justify="center" widthClass="w-48 lg:w-56">
+          <ChampionCard champion={champion} />
+        </Column>
+      </div>
+
+      {/* ============== MOBILE — vertical compact stack ============== */}
+      <div className="md:hidden space-y-6">
+        <ChampionCard champion={champion} />
+
+        <section>
+          <h3 className="text-[11px] font-bold tracking-[0.3em] uppercase text-neutral-400 mb-2">
+            Cuartos
+          </h3>
+          <div className="space-y-2">
+            {qf.length > 0
+              ? qf.map((m, i) => <React.Fragment key={`qf-${i}`}>{renderMatch(m, 0, i)}</React.Fragment>)
+              : <p className="text-fluid-xs text-neutral-600 italic">Pendiente.</p>}
           </div>
-        </div>
+        </section>
 
-        {/* Columna Semifinal Derecha */}
-        <div className="flex flex-col justify-center items-center pt-24 sm:pt-40">
-          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-20 sm:top-32">Semifinal (B)</h3>
-          <MatchDisplay match={semifinals[1]} roundIndex={1} matchIndex={1} />
-        </div>
+        <section>
+          <h3 className="text-[11px] font-bold tracking-[0.3em] uppercase text-neutral-400 mb-2">
+            Semifinales
+          </h3>
+          <div className="space-y-2">
+            {sf.length > 0
+              ? sf.map((m, i) => <React.Fragment key={`sf-${i}`}>{renderMatch(m, 1, i)}</React.Fragment>)
+              : <p className="text-fluid-xs text-neutral-600 italic">Pendiente.</p>}
+          </div>
+        </section>
 
-        {/* Columna Cuartos de Final Derecha */}
-        <div className="flex flex-col justify-around items-center space-y-6 sm:space-y-10 pt-6 sm:pt-10">
-          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-0">Cuartos (B)</h3>
-          <MatchDisplay match={quarterfinals[2]} roundIndex={0} matchIndex={2} />
-          <MatchDisplay match={quarterfinals[3]} roundIndex={0} matchIndex={3} />
-        </div>
+        <section>
+          <h3 className="text-[11px] font-bold tracking-[0.3em] uppercase text-neutral-400 mb-2">
+            Final
+          </h3>
+          {finalMatch ? (
+            renderMatch(finalMatch, 2, 0, true)
+          ) : (
+            <p className="text-fluid-xs text-neutral-600 italic">Pendiente.</p>
+          )}
+        </section>
       </div>
     </div>
   );
 };
 
-export default PlayoffBracket; 
+export default PlayoffBracket;

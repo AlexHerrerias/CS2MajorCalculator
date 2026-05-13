@@ -1,12 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
+    "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        // Paleta de azules
         blue: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -20,7 +20,6 @@ module.exports = {
           900: '#0c4a6e',
           950: '#082f49',
         },
-        // Paleta de grises
         gray: {
           50: '#f8fafc',
           100: '#f1f5f9',
@@ -34,11 +33,52 @@ module.exports = {
           900: '#0f172a',
           950: '#020617',
         },
+        success: {
+          DEFAULT: '#22c55e',
+          50: '#f0fdf4',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          900: '#14532d',
+        },
+        warning: {
+          DEFAULT: '#f59e0b',
+          50: '#fffbeb',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          900: '#78350f',
+        },
+        danger: {
+          DEFAULT: '#ef4444',
+          50: '#fef2f2',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          900: '#7f1d1d',
+        },
+        info: {
+          DEFAULT: '#3b82f6',
+          50: '#eff6ff',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          900: '#1e3a8a',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
         display: ['Montserrat', 'ui-sans-serif', 'system-ui'],
         mono: ['Fira Code', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+      },
+      fontSize: {
+        'fluid-xs': ['clamp(0.75rem, 0.72rem + 0.1vw, 0.825rem)', { lineHeight: '1rem' }],
+        'fluid-sm': ['clamp(0.875rem, 0.85rem + 0.15vw, 0.95rem)', { lineHeight: '1.25rem' }],
+        'fluid-base': ['clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', { lineHeight: '1.5rem' }],
+        'fluid-lg': ['clamp(1.125rem, 1rem + 0.5vw, 1.5rem)', { lineHeight: '1.75rem' }],
+        'fluid-xl': ['clamp(1.25rem, 1.1rem + 0.75vw, 2rem)', { lineHeight: '2rem' }],
+        'fluid-2xl': ['clamp(1.5rem, 1.2rem + 1vw, 2.5rem)', { lineHeight: '2.5rem' }],
+        'fluid-3xl': ['clamp(2rem, 1.5rem + 1.5vw, 3.5rem)', { lineHeight: '1.1' }],
       },
       boxShadow: {
         'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
@@ -53,4 +93,4 @@ module.exports = {
     },
   },
   plugins: [],
-} 
+}

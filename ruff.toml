@@ -1,0 +1,23 @@
+target-version = "py312"
+line-length = 100
+
+extend-exclude = [
+    "*/migrations/*",
+    "backend/src",
+]
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line-too-long is handled by the formatter
+    "B008",  # function-call-in-default-argument (Django patterns)
+]
+
+[lint.per-file-ignores]
+"tournaments/tests.py" = ["B017"]  # asserting on the broad exception type is fine in tests

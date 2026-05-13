@@ -10,12 +10,18 @@ db.sqlite3
 db.sqlite3-journal
 media
 
-# React
+# React / Vite
 node_modules/
 /.pnp
 .pnp.js
 /coverage
 /build
+/frontend/build/
+*.tsbuildinfo
+/frontend/vite.config.js
+/frontend/vite.config.d.ts
+/frontend/vitest.config.js
+/frontend/vitest.config.d.ts
 .DS_Store
 .env.local
 .env.development.local

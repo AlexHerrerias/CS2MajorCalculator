@@ -6,6 +6,7 @@ from django.db.models import F, Q
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.http import require_http_methods
 from .models import Tournament, Team, Stage, StageTeam, Match
+from .stage_recalc import recalculate_swiss_stage_state
 import json
 
 @require_http_methods(["GET"])
@@ -279,36 +280,9 @@ def update_match_result(request):
         # if team1_score is not None: match_to_update.team1_score = team1_score
         # if team2_score is not None: match_to_update.team2_score = team2_score
         match_to_update.save()
-        
-        # Recalcular W/L para todos los StageTeam de esta fase
-        all_stage_teams_in_stage = StageTeam.objects.filter(stage=stage)
-        stage_teams_map = {st.team_id: st for st in all_stage_teams_in_stage}
 
-        for st_team_obj in stage_teams_map.values(): # Resetear antes de recalcular
-            st_team_obj.wins = 0
-            st_team_obj.losses = 0
-
-        for m_in_stage in Match.objects.filter(stage=stage, status='FINISHED'):
-            if m_in_stage.winner_id:
-                if m_in_stage.winner_id in stage_teams_map:
-                    stage_teams_map[m_in_stage.winner_id].wins += 1
-                
-                loser_id = None
-                if m_in_stage.team1_id == m_in_stage.winner_id:
-                    loser_id = m_in_stage.team2_id
-                elif m_in_stage.team2_id == m_in_stage.winner_id:
-                    loser_id = m_in_stage.team1_id
-                
-                if loser_id and loser_id in stage_teams_map:
-                    stage_teams_map[loser_id].losses += 1
-        
-        for st_team_obj_to_save in stage_teams_map.values():
-            st_team_obj_to_save.save()
-
-        # Opcional: recalcular Buchholz si es necesario y la lógica está disponible
-        # from .utils import recalculate_buchholz_scores
-        # if stage.type == 'SWISS':
-        # recalculate_buchholz_scores(stage)
+        # Recompute wins/losses + Buchholz score for every team in this stage.
+        recalculate_swiss_stage_state(stage)
 
         # Devolver una respuesta. Es mejor que el frontend vuelva a llamar a get_major_data.
         # Devolver solo un OK o el partido actualizado.

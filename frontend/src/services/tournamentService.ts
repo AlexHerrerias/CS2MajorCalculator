@@ -21,23 +21,6 @@ import {
 } from './tournament/dataService';
 import { DEBUG_MODE } from './tournament/simulationService';
 
-// Configuración de axios para depurar problemas
-axios.interceptors.request.use(request => {
-  console.log('Request:', request.url);
-  return request;
-});
-
-axios.interceptors.response.use(
-  response => {
-    console.log('Response:', response.status, response.data);
-    return response;
-  },
-  error => {
-    console.error('API Error:', error.response?.status, error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
-
 // Función para obtener el valor de una cookie por su nombre
 function getCookie(name: string): string | null {
   let cookieValue = null;
@@ -120,10 +103,10 @@ export const getAllTournaments = async (): Promise<TournamentInfo[]> => {
 // --- Autenticación y Perfil de Usuario ---
 export const getCurrentUserProfile = async (): Promise<TwitchUserProfile | null> => {
   try {
-    const response = await apiClient.get<TwitchUserProfile>('/me/', { withCredentials: true });
-    return response.data;
+    const response = await apiClient.get<TwitchUserProfile | null>('/me/', { withCredentials: true });
+    return response.data ?? null;
   } catch (error) {
-    console.warn('Error fetching current user profile:', error);
+    // Network/server error; keep the UI usable by treating it as no session.
     return null;
   }
 };

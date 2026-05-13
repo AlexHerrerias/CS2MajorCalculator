@@ -262,10 +262,23 @@ class UserFantasyProfileView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class CurrentUserProfileView(APIView):
-    permission_classes = [IsAuthenticated]
+    """Return the Twitch UserProfile for the current session, or null.
+
+    Always 200 — `null` body when the requester is anonymous, when the logged-in
+    user has no UserProfile (e.g. the Django superuser), or when the lookup
+    fails. The frontend treats this endpoint as informational, so a hard error
+    shows up as red noise in the console without value.
+    """
+
+    permission_classes = [AllowAny]
 
     def get(self, request, format=None):
-        user_profile = get_object_or_404(UserProfile, user=request.user)
+        if not request.user.is_authenticated:
+            return Response(None)
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+        except UserProfile.DoesNotExist:
+            return Response(None)
         serializer = UserProfileSerializer(user_profile)
         return Response(serializer.data)
 

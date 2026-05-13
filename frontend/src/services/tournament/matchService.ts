@@ -40,13 +40,14 @@ export function updateBuchholzScores(stage: Stage): void {
     });
   });
 
+  // Standard CS Swiss Buchholz: sum of each opponent's WIN count in this stage
+  // (not wins-minus-losses). Keeps the simulation and the backend in sync.
   stage.teams.forEach((team: Team) => {
     let totalBuchholz = 0;
     opponentsInStage[team.id]?.forEach((opponentId: number) => {
       const opponentTeam = stage.teams.find((t: Team) => t.id === opponentId);
       if (opponentTeam) {
-        const opponentRecordDiff = (opponentTeam.wins || 0) - (opponentTeam.losses || 0);
-        totalBuchholz += opponentRecordDiff;
+        totalBuchholz += opponentTeam.wins || 0;
       }
     });
     team.buchholzScore = totalBuchholz;

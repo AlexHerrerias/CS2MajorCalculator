@@ -25,6 +25,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from .models import Match, MatchUpdateSettings, Team
+from .stage_recalc import recalculate_swiss_stage_state
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +230,8 @@ def update_single_match_from_liquipedia(match_id: int) -> bool:
     if changed:
         match.last_external_update = timezone.now()
         match.save()
+        if match.stage_id and match.stage.type == "SWISS":
+            recalculate_swiss_stage_state(match.stage)
         logger.info("Match %s updated from Liquipedia.", match_id)
     else:
         logger.info("Match %s: no changes from Liquipedia.", match_id)

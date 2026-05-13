@@ -65,7 +65,6 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
 
   // Función para obtener el seed visual ajustado según la fase, seguramente habrá que ajustarla para torneos con diferentes fases
   const getVisualSeed = (teamSeed: number, stageName: string): number => {
-    console.log(stageName);
     if (stageName === 'phase1') {
       // Para la Fase 1 (Order 1), seeds 17-32 se mapean a 1-16
       if (teamSeed >= 17 && teamSeed <= 32) {
@@ -321,8 +320,10 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
         if (opponent && !seenIds.has(opponent.id)) {
           seenIds.add(opponent.id);
           // Estado del oponente tras la ronda anterior a la actual
+          // Standard CS Swiss Buchholz: opponent contribution is their win
+          // count so far, not their wins-minus-losses differential.
           const oppState = getTeamStateInRound(opponent.id, currentRoundIndex - 1);
-          const contribution = oppState.wins - oppState.losses;
+          const contribution = oppState.wins;
           opponents.push({
             opponent,
             result: match.winner === teamId ? 'W' : (match.winner === opponent.id ? 'L' : '-'),

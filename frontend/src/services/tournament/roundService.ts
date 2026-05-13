@@ -1,6 +1,6 @@
 import { Round, Match, Stage } from '../../types/hltvTypes';
 import { getCurrentData } from './dataService';
-import { generateFirstRoundMatches, generateNextRoundMatches } from './matchService';
+import { generateFirstRoundMatches, generateNextRoundMatches, updateBuchholzScores } from './matchService';
 import { simulateRoundResults } from './simulationService';
 import { generatePlayoffBracket, updatePlayoffBracket, debugLog } from './simulationService';
 
@@ -34,8 +34,16 @@ export async function generateSimulatedRounds(
     debugLog(`Generando rondas para fase ${phaseId} con ${stage.teams.length} equipos`);
     debugLog(`Tipo de Fase: ${stage.type}`);
     
-    // Para fase 4 (Champions Stage - Playoffs), usamos sistema de bracket de eliminación directa
-    if (phaseId === 'phase4') {
+    // Single-elimination bracket for any stage flagged as a playoff (not just phase4).
+    // Lets the motor pick up Champions Stages that live at phase3 or any other slot
+    // — what matters is `type === 'PLAYOFF'` (or the name containing playoff/champions).
+    const isPlayoffStage =
+      phaseId === 'phase4' ||
+      stage.type === 'PLAYOFF' ||
+      stage.name?.toLowerCase().includes('playoff') ||
+      stage.name?.toLowerCase().includes('champions');
+
+    if (isPlayoffStage) {
       stage.teams.forEach(team => {
         team.wins = 0;
         team.losses = 0;
@@ -91,10 +99,35 @@ export async function generateSimulatedRounds(
         }
       }
 
-      // Llamar a updatePlayoffBracket UNA VEZ después de aplicar todos los resultados
+      // Apply any restored results to the bracket before simulating the rest.
       updatePlayoffBracket(stage);
-      
-      /* El bucle de simulación está comentado */
+
+      // Cascade simulation: for every still-empty slot, the lower-seeded team
+      // (the "favorite") wins. After each round, updatePlayoffBracket fills
+      // the next round's team slots from the winners we just decided.
+      const simulateMatchIfPending = (match: Match) => {
+        if (match.winner !== null && match.winner !== undefined) return;
+        if (!match.team1Id || !match.team2Id) return;
+        const t1 = stage.teams.find(t => t.id === match.team1Id);
+        const t2 = stage.teams.find(t => t.id === match.team2Id);
+        if (!t1 || !t2) return;
+        const t1Seed = t1.seed ?? Infinity;
+        const t2Seed = t2.seed ?? Infinity;
+        match.winner = t1Seed <= t2Seed ? match.team1Id : match.team2Id;
+      };
+
+      if (stage.rounds[0]?.matches) {
+        stage.rounds[0].matches.forEach(simulateMatchIfPending);
+        updatePlayoffBracket(stage);
+      }
+      if (stage.rounds[1]?.matches) {
+        stage.rounds[1].matches.forEach(simulateMatchIfPending);
+        updatePlayoffBracket(stage);
+      }
+      if (stage.rounds[2]?.matches?.[0]) {
+        simulateMatchIfPending(stage.rounds[2].matches[0]);
+      }
+
       updateRoundStatuses(stage);
       return;
     }
@@ -272,7 +305,6 @@ export async function generateSimulatedRounds(
             }
           });
         }
-        const { updateBuchholzScores } = require('./matchService');
         updateBuchholzScores(stage);
       }
       
@@ -331,13 +363,11 @@ export async function generateSimulatedRounds(
       // FIN DEBUG LOG ADICIONAL
 
       if (roundIdx < stage.rounds.length -1) {
-        const { updateBuchholzScores } = require('./matchService');
         updateBuchholzScores(stage);
       }
     }
     
     updateRoundStatuses(stage);
-    const { updateBuchholzScores } = require('./matchService');
     updateBuchholzScores(stage);
     
     debugLog(`Generación de rondas completada para fase ${phaseId}`);

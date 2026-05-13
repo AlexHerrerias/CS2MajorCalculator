@@ -617,14 +617,14 @@ class SwissBuchholzSimulationTest(TestCase):
         self.assertEqual(self._record_for(t3), (0, 0))
         self.assertEqual(self._record_for(_t4), (0, 0))
 
-    def test_buchholz_score_field_is_never_written_by_backend(self):
-        """Document a real gap: the backend never computes StageTeam.buchholz_score.
+    def test_buchholz_scores_match_sum_of_opponent_wins(self):
+        """After a full Swiss simulation, every StageTeam's buchholz_score should
+        equal the sum of the FINAL win counts of each opponent it played.
 
-        The frontend uses it as the third tiebreaker when selecting the top-8
-        qualified teams (`BuchholzRounds.tsx`), but right now it stays at the
-        default 0.0 for every team forever — so the tiebreaker is a no-op in
-        practice. This test asserts the current behavior so any future fix is
-        forced to update it.
+        With this schedule (T1>T2, T3>T4 / T1>T3, T2>T4 / T2>T3, T1>T4):
+            final wins: T1=3, T2=2, T3=1, T4=0
+            opponents:  T1=[T2,T3,T4], T2=[T1,T4,T3], T3=[T4,T1,T2], T4=[T3,T2,T1]
+            buchholz:   T1=2+1+0=3, T2=3+0+1=4, T3=0+3+2=5, T4=1+2+3=6
         """
         t1, t2, t3, t4 = self.teams
         self._post_winner(round_number=1, match_index_in_round=0, winner=t1)
@@ -634,16 +634,13 @@ class SwissBuchholzSimulationTest(TestCase):
         self._post_winner(round_number=3, match_index_in_round=0, winner=t2)
         self._post_winner(round_number=3, match_index_in_round=1, winner=t1)
 
+        expected = {t1.id: 3.0, t2.id: 4.0, t3.id: 5.0, t4.id: 6.0}
         for team in (t1, t2, t3, t4):
             st = StageTeam.objects.get(stage=self.stage, team=team)
             self.assertEqual(
                 st.buchholz_score,
-                0.0,
-                msg=(
-                    f"{team.name}: buchholz_score is still 0.0. When the "
-                    "backend grows a real Buchholz computation, update this "
-                    "test with the expected values."
-                ),
+                expected[team.id],
+                msg=f"{team.name}: expected Buchholz {expected[team.id]}, got {st.buchholz_score}",
             )
 
 

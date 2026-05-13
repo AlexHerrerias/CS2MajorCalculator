@@ -275,9 +275,35 @@ export const updateMatchWinner = async (
 
   if (isPlayoffStage) {
     debugLog(`Playoff stage detected (${actualCurrentStageId}). Updating bracket directly.`);
-    // Llamar directamente a updatePlayoffBracket para actualizar los slots de la siguiente ronda
-    updatePlayoffBracket(stage); 
-    // Actualizar estados de las rondas (active/completed)
+    // Update the team slots in the next round based on the new winner.
+    updatePlayoffBracket(stage);
+
+    // updatePlayoffBracket only fixes team1Id/team2Id; if the next round's existing
+    // winner no longer belongs to the new pairing, the cascade gets stuck. Re-simulate
+    // any orphaned match with the favorite (lower seed) so SF and Final follow QF.
+    const reSimulateIfWinnerOrphaned = (m: Match | undefined) => {
+      if (!m || !m.team1Id || !m.team2Id) return;
+      const winnerStillInMatch = m.winner === m.team1Id || m.winner === m.team2Id;
+      if (winnerStillInMatch) return;
+      const t1 = stage.teams.find(t => t.id === m.team1Id);
+      const t2 = stage.teams.find(t => t.id === m.team2Id);
+      if (!t1 || !t2) return;
+      const t1Seed = t1.seed ?? Infinity;
+      const t2Seed = t2.seed ?? Infinity;
+      m.winner = t1Seed <= t2Seed ? m.team1Id : m.team2Id;
+      debugLog(`Re-simulado partido playoff con winner huérfano: ${t1.name} vs ${t2.name} -> ${m.winner === t1.id ? t1.name : t2.name}`);
+    };
+
+    if (roundIndex === 0) {
+      // QF changed -> re-simulate any orphaned SF, then propagate to the Final
+      stage.rounds[1]?.matches?.forEach(reSimulateIfWinnerOrphaned);
+      updatePlayoffBracket(stage);
+      reSimulateIfWinnerOrphaned(stage.rounds[2]?.matches?.[0]);
+    } else if (roundIndex === 1) {
+      // SF changed -> the Final slot just moved, re-simulate it if needed
+      reSimulateIfWinnerOrphaned(stage.rounds[2]?.matches?.[0]);
+    }
+
     updateRoundStatusesLocal(stage);
   } else {
     // --- INICIO LÓGICA FASES SUIZAS (Existente) ---
@@ -313,34 +339,37 @@ export const updateMatchWinner = async (
         return numA - numB;
       });
 
-      // Guarda una copia de todos los equipos originales por fase antes de empezar la propagación
+      // Guarda una copia de todos los equipos originales por fase antes de empezar la propagación.
+      // "Originales" = equipos que no han llegado a la fase por promoción de una fase anterior.
       const originalTeamsByStage: {[stageId: string]: Team[]} = {};
       stageKeys.forEach(stageId => {
-        if (stageId !== initialChangedStageId && currentTournamentData.stages[stageId]?.teams) {
-          // Solo guardamos los equipos de las fases que NO son la que se modificó inicialmente
-          // CORRECCIÓN: Filtrar para guardar solo los equipos originales (no los promovidos en simulaciones previas)
-          // - Para phase2, los equipos originales tienen seeds 9-16 (8 equipos)
-          // - Para phase3, los equipos originales tienen seeds 1-8 (8 equipos)
-          // - Para phase4, varía según el torneo
+        const stageData = currentTournamentData.stages[stageId];
+        if (stageId !== initialChangedStageId && stageData?.teams) {
+          const stageIsPlayoff =
+            stageData.type === 'PLAYOFF' ||
+            stageData.name?.toLowerCase().includes('playoff') ||
+            stageData.name?.toLowerCase().includes('champions') ||
+            stageId === 'phase4';
+
           let trulyOriginalTeams: Team[] = [];
-          
-          if (stageId === 'phase2') {
-            // Equipos originales de phase2 tienen seeds del 9 al 16
-            trulyOriginalTeams = currentTournamentData.stages[stageId].teams
-              .filter(t => t.seed >= 9 && t.seed <= 16);
-            debugLog(`Filtrados ${trulyOriginalTeams.length} equipos REALMENTE originales de ${stageId} (seeds 9-16) de un total de ${currentTournamentData.stages[stageId].teams.length}`);
+
+          if (stageIsPlayoff) {
+            // En playoffs (sin importar el slot), los re-seeds de los advancers caen en 1..8
+            // y se confundirían con "originales". La bandera isPromoted es la única señal
+            // confiable; si no hay equipos invitados directos al playoff, la lista queda vacía.
+            trulyOriginalTeams = stageData.teams.filter(t => !t.isPromoted);
+            debugLog(`Filtrados ${trulyOriginalTeams.length} equipos originales de ${stageId} (playoff, usando !isPromoted) de un total de ${stageData.teams.length}`);
+          } else if (stageId === 'phase2') {
+            trulyOriginalTeams = stageData.teams.filter(t => t.seed >= 9 && t.seed <= 16);
+            debugLog(`Filtrados ${trulyOriginalTeams.length} equipos REALMENTE originales de ${stageId} (seeds 9-16) de un total de ${stageData.teams.length}`);
           } else if (stageId === 'phase3') {
-            // Equipos originales de phase3 tienen seeds del 1 al 8
-            trulyOriginalTeams = currentTournamentData.stages[stageId].teams
-              .filter(t => t.seed >= 1 && t.seed <= 8);
-            debugLog(`Filtrados ${trulyOriginalTeams.length} equipos REALMENTE originales de ${stageId} (seeds 1-8) de un total de ${currentTournamentData.stages[stageId].teams.length}`);
+            trulyOriginalTeams = stageData.teams.filter(t => t.seed >= 1 && t.seed <= 8);
+            debugLog(`Filtrados ${trulyOriginalTeams.length} equipos REALMENTE originales de ${stageId} (seeds 1-8) de un total de ${stageData.teams.length}`);
           } else {
-            // Para otras fases o phase4, usar el método anterior
-            trulyOriginalTeams = currentTournamentData.stages[stageId].teams
-              .filter(t => !t.isPromoted); // Usar la bandera isPromoted como respaldo
-            debugLog(`Filtrados ${trulyOriginalTeams.length} equipos no promovidos de ${stageId} (usando isPromoted) de un total de ${currentTournamentData.stages[stageId].teams.length}`);
+            trulyOriginalTeams = stageData.teams.filter(t => !t.isPromoted);
+            debugLog(`Filtrados ${trulyOriginalTeams.length} equipos no promovidos de ${stageId} (usando isPromoted) de un total de ${stageData.teams.length}`);
           }
-          
+
           originalTeamsByStage[stageId] = JSON.parse(JSON.stringify(trulyOriginalTeams));
           debugLog(`Guardados ${originalTeamsByStage[stageId].length} equipos originales de la fase ${stageId} antes de la propagación`);
         }
@@ -426,19 +455,27 @@ export const updateMatchWinner = async (
           if (qualifiedTeams.length > 0) {
             debugLog(`Mezclando ${qualifiedTeams.length} equipos clasificados con ${originalNextStageTeams.length} equipos originales en ${nextStageId}`);
             
-            // Recalcular el seeding para los equipos clasificados
+            // Recalcular el seeding para los equipos clasificados según la fase de destino.
+            // Playoffs (sin importar el slot phaseN) reciben seeds 1..8 para que
+            // generatePlayoffBracket los empareje high-vs-low correctamente.
             let recalculatedQualifiedTeams = [...qualifiedTeams];
-            
-            // Asignar el seeding inicial adecuado según la fase de destino
-            if (nextStageId === 'phase2') {
+            const nextStageData = currentTournamentData.stages[nextStageId];
+            const nextStageIsPlayoff =
+              nextStageData?.type === 'PLAYOFF' ||
+              nextStageData?.name?.toLowerCase().includes('playoff') ||
+              nextStageData?.name?.toLowerCase().includes('champions') ||
+              nextStageId === 'phase4' ||
+              nextStageId.toLowerCase().includes('playoff');
+
+            if (nextStageIsPlayoff) {
+              recalculatedQualifiedTeams = recalculateNextPhaseSeedForQualifiedTeams(qualifiedTeams, 1);
+              debugLog(`Seeding recalculado para equipos que avanzan a playoffs (${nextStageId}): Comienza en 1`);
+            } else if (nextStageId === 'phase2') {
               recalculatedQualifiedTeams = recalculateNextPhaseSeedForQualifiedTeams(qualifiedTeams, 17);
               debugLog(`Seeding recalculado para equipos que avanzan a phase2: Comienza en 17`);
             } else if (nextStageId === 'phase3') {
               recalculatedQualifiedTeams = recalculateNextPhaseSeedForQualifiedTeams(qualifiedTeams, 9);
-              debugLog(`Seeding recalculado para equipos que avanzan a phase3: Comienza en 9`);
-            } else if (nextStageId === 'phase4' || nextStageId.toLowerCase().includes('playoff')) {
-              recalculatedQualifiedTeams = recalculateNextPhaseSeedForQualifiedTeams(qualifiedTeams, 1);
-              debugLog(`Seeding recalculado para equipos que avanzan a playoffs: Comienza en 1`);
+              debugLog(`Seeding recalculado para equipos que avanzan a phase3 swiss: Comienza en 9`);
             }
             
             // Marcamos los equipos promovidos y reseteamos sus estadísticas

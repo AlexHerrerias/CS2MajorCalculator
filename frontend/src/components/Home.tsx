@@ -88,29 +88,32 @@ const Home: React.FC = () => {
   };
 
   if (!tournamentData) {
-    return <div className="min-h-screen relative isolate bg-black flex items-center justify-center"><p className="text-xl text-white">Cargando torneo...</p></div>;
+    return (
+      <div className="min-h-screen relative isolate bg-black flex items-center justify-center px-4 text-center">
+        <p className="text-fluid-lg text-white">Cargando torneo...</p>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen relative isolate bg-black">
       <GridPattern />
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="pt-8 pb-6 flex flex-col items-center text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3 bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-secondary-400">
+      <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="pt-4 sm:pt-8 pb-4 sm:pb-6 flex flex-col items-center text-center">
+          <h1 className="text-fluid-2xl sm:text-fluid-3xl font-bold text-white mb-3 bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-secondary-400">
             {tournamentData.name}
           </h1>
-          <div className="h-1 w-24 bg-gradient-to-r from-primary-500 to-secondary-500 mx-auto"></div>
+          <div className="h-1 w-16 sm:w-24 bg-gradient-to-r from-primary-500 to-secondary-500 mx-auto"></div>
         </div>
 
         {currentStageId && tournamentData.stages[currentStageId] && (
-          <div className="pb-8">
-            <StageSelector 
-              currentStage={currentStageId} 
-              onStageChange={handleStageChange} 
+          <div className="pb-6 sm:pb-8">
+            <StageSelector
+              currentStage={currentStageId}
+              onStageChange={handleStageChange}
               availableStages={Object.keys(tournamentData.stages).map(stageKey => ({
-                id: stageKey, // phase1, phase2, etc.
-                name: tournamentData.stages[stageKey].name, // Nombre legible de la fase
-                // Icono se asignará dentro de StageSelector o podrías definir una lógica aquí
+                id: stageKey,
+                name: tournamentData.stages[stageKey].name,
               }))}
             />
           </div>

@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.utils import timezone
+
 from .models import (
     Tournament, Team, Stage, StageTeam, Match, MatchUpdateSettings,
     UserProfile, FantasyPhasePick, FantasyPlayoffPick
@@ -14,20 +16,29 @@ class TournamentAdmin(admin.ModelAdmin):
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
-    list_display = ('name', 'region', 'hltv_team_id')
+    list_display = ('name', 'region', 'world_ranking', 'world_ranking_updated_at', 'hltv_team_id')
     list_filter = ('region',)
     search_fields = ('name', 'hltv_team_id')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'world_ranking_updated_at')
 
     fieldsets = (
         (None, {
             'fields': ('name', 'hltv_team_id', 'region', 'logo')
+        }),
+        ('Ranking', {
+            'fields': ('world_ranking', 'world_ranking_updated_at'),
+            'description': 'world_ranking lo edita el operador a mano. world_ranking_updated_at se actualiza solo al guardar.',
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        if form is not None and 'world_ranking' in form.changed_data:
+            obj.world_ranking_updated_at = timezone.now()
+        super().save_model(request, obj, form, change)
 
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):

@@ -1,0 +1,46 @@
+name: frontend-ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          # Cache by package.json hash; the lockfile may be regenerated locally
+          # after this PR merges. Once it exists we can switch to `cache: npm`
+          # with `cache-dependency-path: frontend/package-lock.json`.
+
+      - name: Install dependencies
+        # `npm ci` requires a lockfile. We fall back to `npm install` so that
+        # this workflow is green right after PR #4 (which removed the CRA
+        # lockfile) and stays correct once a fresh lockfile is committed.
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Build (tsc + vite)
+        run: npm run build
+
+      - name: Tests (vitest)
+        run: npm run test

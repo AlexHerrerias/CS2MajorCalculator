@@ -95,10 +95,10 @@ const FantasyDashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  const cardLinkClassName = "block p-6 rounded-xl shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-xl";
-  const cardTitleClassName = "text-xl font-semibold text-white mb-2";
-  const cardDescriptionClassName = "text-neutral-200 text-sm";
-  const iconClassName = "w-10 h-10 text-primary-400 mb-3";
+  const cardLinkClassName = "block p-4 sm:p-6 rounded-xl shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-xl";
+  const cardTitleClassName = "text-fluid-lg font-semibold text-white mb-2";
+  const cardDescriptionClassName = "text-neutral-200 text-fluid-sm";
+  const iconClassName = "w-9 h-9 sm:w-10 sm:h-10 text-primary-400 mb-3";
 
   // Estilos para fondos de tarjetas (ejemplos)
   const cardBackgrounds = {
@@ -119,22 +119,22 @@ const FantasyDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] relative isolate bg-black text-white"> 
+    <div className="min-h-[calc(100vh-4rem)] relative isolate bg-black text-white">
       <GridPattern />
-      <div className="relative z-10 max-w-5xl mx-auto p-4 sm:p-8 pt-8">
+      <div className="relative z-10 max-w-5xl mx-auto p-3 sm:p-8 pt-6 sm:pt-8">
         {/* Sección de Bienvenida Rediseñada */}
         {currentUser && (
-          <section className="mb-12 p-8 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-xl shadow-xl text-white transition-all duration-500 ease-in-out hover:shadow-2xl">
-            <div className="flex flex-col sm:flex-row items-center justify-between">
-              <div className="mb-4 sm:mb-0">
-                <h2 className="text-3xl font-bold">
+          <section className="mb-8 sm:mb-12 p-5 sm:p-8 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-xl shadow-xl text-white transition-all duration-500 ease-in-out hover:shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+              <div className="text-center sm:text-left">
+                <h2 className="text-fluid-2xl font-bold">
                   ¡Hola, <span className="font-extrabold">{currentUser.twitch_username || currentUser.user.username}</span>!
                 </h2>
-                <p className="text-lg text-primary-200">Listo para dominar el Fantasy del Major?</p>
+                <p className="text-fluid-base text-primary-200">Listo para dominar el Fantasy del Major?</p>
               </div>
               <div className="text-center sm:text-right">
-                <p className="text-sm uppercase text-primary-300 tracking-wider">Tus Puntos Fantasy</p>
-                <p className="text-5xl font-bold text-white tabular-nums">
+                <p className="text-fluid-xs uppercase text-primary-300 tracking-wider">Tus Puntos Fantasy</p>
+                <p className="text-fluid-3xl font-bold text-white tabular-nums">
                   {currentUser.total_fantasy_points}
                 </p>
               </div>
@@ -142,7 +142,7 @@ const FantasyDashboard: React.FC = () => {
           </section>
         )}
         {/* Acciones de Fantasy*/}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-12">
           {/* Card para Picks de Fase */}
           {activeSwissStageId ? (
             <Link to={`/fantasy/stage/${activeSwissStageId}/picks`} className={`${cardLinkClassName} ${cardBackgrounds.picksFaseGrupos}`}>
@@ -215,15 +215,15 @@ const FantasyDashboard: React.FC = () => {
         </section>
 
         {/* Sección de Reglas Remodelada */}
-        <section className={`mb-12 p-6 ${cardBackgrounds.comoJugar} rounded-xl shadow-lg`}>
-          <div className="flex items-center mb-6">
-            <BookOpenIconSVG className="w-8 h-8 text-primary-400 mr-3 flex-shrink-0" />
-            <h2 className="text-2xl font-semibold text-white">¿Cómo Jugar al Fantasy? Guía Rápida</h2>
+        <section className={`mb-8 sm:mb-12 p-4 sm:p-6 ${cardBackgrounds.comoJugar} rounded-xl shadow-lg`}>
+          <div className="flex items-center mb-4 sm:mb-6">
+            <BookOpenIconSVG className="w-7 h-7 sm:w-8 sm:h-8 text-primary-400 mr-3 flex-shrink-0" />
+            <h2 className="text-fluid-xl font-semibold text-white">¿Cómo Jugar al Fantasy? Guía Rápida</h2>
           </div>
           
           <div className="space-y-6">
             <div>
-              <h3 className="text-xl font-semibold text-primary-300 mb-3">Fase de Grupos (Sistema Suizo)</h3>
+              <h3 className="text-fluid-lg font-semibold text-primary-300 mb-3">Fase de Grupos (Sistema Suizo)</h3>
               <p className="text-neutral-300 mb-2">Tu misión es predecir el rendimiento de los equipos:</p>
               <ul className="list-none space-y-3">
                 <li className="flex items-start p-3 bg-neutral-700/50 rounded-lg hover:bg-neutral-700 transition-colors">
@@ -251,7 +251,7 @@ const FantasyDashboard: React.FC = () => {
             </div>
 
             <div>
-              <h3 className="text-xl font-semibold text-primary-300 mb-3">Fase de Playoffs (Eliminatoria Directa)</h3>
+              <h3 className="text-fluid-lg font-semibold text-primary-300 mb-3">Fase de Playoffs (Eliminatoria Directa)</h3>
               <p className="text-neutral-300 mb-2">Aquí construyes tu bracket hacia la gloria:</p>
               <ul className="list-none space-y-3">
                 <li className="flex items-start p-3 bg-neutral-700/50 rounded-lg hover:bg-neutral-700 transition-colors">

@@ -45,7 +45,7 @@ const UserProfileTeamCard: React.FC<{ team: FantasyTeamDetail; categoryContext?:
       className={`p-2 rounded-lg shadow-md transition-all flex flex-col items-center justify-between relative 
                   bg-neutral-800 
                   ${borderColorClass}
-                  border w-32 h-36`}
+                  border w-28 h-32 sm:w-32 sm:h-36`}
       title={isImpossible ? `${team.name} (Rol imposible para este pick)` : team.name}
     >
       {isUnderdogBonus && !isImpossible && (
@@ -99,7 +99,7 @@ const UserProfileStagePicksDisplay: React.FC<UserProfileStagePicksDisplayProps> 
     if (!teams || teams.length === 0) {
       return (
         <div className="mb-6 md:mb-0">
-          <h4 className={`text-lg font-semibold text-neutral-100 mb-3 ${centerAlign ? 'text-center' : 'text-left'}`}>{title}</h4>
+          <h4 className={`text-fluid-base font-semibold text-neutral-100 mb-3 ${centerAlign ? 'text-center' : 'text-left'}`}>{title}</h4>
           <p className={`text-sm text-neutral-500 italic ${centerAlign ? 'text-center' : 'text-left'}`}>Ninguna selección.</p>
         </div>
       );
@@ -107,7 +107,7 @@ const UserProfileStagePicksDisplay: React.FC<UserProfileStagePicksDisplayProps> 
     return (
       <div className="mb-6 md:mb-0">
         <h4 className={`text-lg font-semibold text-neutral-100 mb-3 ${centerAlign ? 'text-center' : 'text-left'}`}>{title}</h4>
-        <div className={`flex flex-wrap gap-4 ${centerAlign || teams.length > 0 ? 'justify-center' : 'justify-start'}`}>
+        <div className={`flex flex-wrap gap-3 sm:gap-4 ${centerAlign || teams.length > 0 ? 'justify-center' : 'justify-start'}`}>
           {teams.map(team => (
             <UserProfileTeamCard key={`${categoryTitle}-${team.id}`} team={team} categoryContext={categoryTitle} />
           ))}
@@ -117,16 +117,16 @@ const UserProfileStagePicksDisplay: React.FC<UserProfileStagePicksDisplayProps> 
   };
 
   return (
-    <div className="p-4 sm:p-6 my-4 w-full max-w-6xl mx-auto">
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:space-x-8 mb-8">
-        <div className="lg:w-2/5 xl:w-1/3 mb-8 lg:mb-0 "> 
-          {renderTeamPicksList(pickData.teams_3_0_details, 'Equipos 3-0'/*, stageRules?.num_teams_3_0*/)}
+    <div className="p-3 sm:p-6 my-4 w-full max-w-6xl mx-auto">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:space-x-8 mb-6 sm:mb-8">
+        <div className="lg:w-2/5 xl:w-1/3 mb-6 lg:mb-0">
+          {renderTeamPicksList(pickData.teams_3_0_details, 'Equipos 3-0')}
         </div>
-        <div className="lg:w-2/5 xl:w-1/3"> 
-          {renderTeamPicksList(pickData.teams_0_3_details, 'Equipos 0-3'/*, stageRules?.num_teams_0_3*/)}
+        <div className="lg:w-2/5 xl:w-1/3">
+          {renderTeamPicksList(pickData.teams_0_3_details, 'Equipos 0-3')}
         </div>
       </div>
-      
+
       <div>
         {renderTeamPicksList(pickData.teams_advance_details, 'Avanzarán', undefined, true)}
       </div>

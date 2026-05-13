@@ -7,7 +7,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -245,8 +246,12 @@ const FantasyStagePicks: React.FC = () => {
   const [activeDragItem, setActiveDragItem] = useState<FantasyTeamDetail | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor)
+    // Mouse: small activation distance avoids accidental drags when clicking.
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // Touch: hold ~200ms with up to 8px tolerance — lets the user still scroll the page
+    // by swiping while reserving a press-and-hold gesture for picking up a team.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor),
   );
 
   const { setNodeRef: setAvailableZoneNodeRef } = useDroppable({ id: 'zone-available', data: {type: 'zone', category: 'available'} });
@@ -530,18 +535,18 @@ const FantasyStagePicks: React.FC = () => {
       <div className={commonPageClasses}>
         <GridPattern />
         <div className={commonContainerClasses.replace("p-4 text-white", "p-4")}>
-         <h1 className="text-3xl font-bold mb-2">Picks de Fantasy - {stageInfo.name}</h1>
-         <p className="mb-1 text-neutral-400">Estado: <span className={`font-semibold ${stageInfo.fantasy_status === 'OPEN' ? 'text-green-400' : 'text-red-400'}`}>{stageInfo.fantasy_status}</span></p>
-         {stageInfo.fantasy_status !== 'OPEN' && <p className="mb-4 text-sm text-yellow-400">Las elecciones para esta fase están cerradas.</p>}
+         <h1 className="text-fluid-2xl font-bold mb-2">Picks de Fantasy - {stageInfo.name}</h1>
+         <p className="mb-1 text-neutral-400 text-fluid-sm">Estado: <span className={`font-semibold ${stageInfo.fantasy_status === 'OPEN' ? 'text-green-400' : 'text-red-400'}`}>{stageInfo.fantasy_status}</span></p>
+         {stageInfo.fantasy_status !== 'OPEN' && <p className="mb-4 text-fluid-xs text-yellow-400">Las elecciones para esta fase están cerradas.</p>}
 
-         <div className="flex flex-col gap-8 mt-6">
-           
+         <div className="flex flex-col gap-6 sm:gap-8 mt-4 sm:mt-6">
+
            {stageInfo.rules ? (
-             <div className="space-y-8"> 
-               <div className="flex flex-row justify-between items-start gap-4">
+             <div className="space-y-6 sm:space-y-8">
+               <div className="flex flex-col sm:flex-row justify-between items-stretch gap-4">
                  <div className="flex-1 min-w-0">
-                   <h3 className="text-xl font-semibold mb-3 text-neutral-200 text-center">Equipos 3-0 ({pickedTeams30.filter(t=>t!==null).length}/{stageInfo.rules.num_teams_3_0})</h3>
-                   <div className="flex flex-row flex-wrap justify-center gap-3">
+                   <h3 className="text-fluid-lg font-semibold mb-3 text-neutral-200 text-center">Equipos 3-0 ({pickedTeams30.filter(t=>t!==null).length}/{stageInfo.rules.num_teams_3_0})</h3>
+                   <div className="flex flex-row flex-wrap justify-center gap-2 sm:gap-3">
                      {pickedTeams30.map((teamId, index) => {
                        const teamData = getTeamDataForSlot(teamId);
                        return (
@@ -559,8 +564,8 @@ const FantasyStagePicks: React.FC = () => {
                  </div>
 
                  <div className="flex-1 min-w-0">
-                   <h3 className="text-xl font-semibold mb-3 text-neutral-200 text-center">Equipos 0-3 ({pickedTeams03.filter(t=>t!==null).length}/{stageInfo.rules.num_teams_0_3})</h3>
-                   <div className="flex flex-row flex-wrap justify-center gap-3">
+                   <h3 className="text-fluid-lg font-semibold mb-3 text-neutral-200 text-center">Equipos 0-3 ({pickedTeams03.filter(t=>t!==null).length}/{stageInfo.rules.num_teams_0_3})</h3>
+                   <div className="flex flex-row flex-wrap justify-center gap-2 sm:gap-3">
                      {pickedTeams03.map((teamId, index) => {
                        const teamData = getTeamDataForSlot(teamId);
                        return (
@@ -579,8 +584,8 @@ const FantasyStagePicks: React.FC = () => {
                </div>
 
                <div>
-                 <h3 className="text-xl font-semibold mb-3 text-neutral-200 text-center">Avanzarán ({pickedTeamsAdvance.filter(t=>t!==null).length}/{stageInfo.rules.num_teams_advance})</h3>
-                 <div className="flex flex-row flex-wrap justify-center gap-3">
+                 <h3 className="text-fluid-lg font-semibold mb-3 text-neutral-200 text-center">Avanzarán ({pickedTeamsAdvance.filter(t=>t!==null).length}/{stageInfo.rules.num_teams_advance})</h3>
+                 <div className="flex flex-row flex-wrap justify-center gap-2 sm:gap-3">
                    {pickedTeamsAdvance.map((teamId, index) => {
                      const teamData = getTeamDataForSlot(teamId);
                      return (
@@ -604,16 +609,19 @@ const FantasyStagePicks: React.FC = () => {
                </p>
              </div>
            )}
-           <div 
-             id="zone-available" 
-             ref={setAvailableZoneNodeRef} 
-             className="bg-neutral-900/70 p-4 rounded-lg shadow-xl min-h-[200px] border border-neutral-700"
+           <div
+             id="zone-available"
+             ref={setAvailableZoneNodeRef}
+             className="bg-neutral-900/70 p-3 sm:p-4 rounded-lg shadow-xl min-h-[200px] border border-neutral-700"
            >
-             <h2 className="text-2xl font-semibold mb-4 text-neutral-100 text-center">Equipos Disponibles</h2>
+             <h2 className="text-fluid-xl font-semibold mb-4 text-neutral-100 text-center">Equipos Disponibles</h2>
              {availableTeams.length === 0 && (
-                <p className="text-neutral-500 text-center py-4">No hay más equipos disponibles o todos han sido seleccionados.</p>
+                <p className="text-neutral-500 text-center py-4 text-fluid-sm">No hay más equipos disponibles o todos han sido seleccionados.</p>
              )}
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 justify-center">
+             <p className="md:hidden text-fluid-xs text-neutral-500 text-center mb-3">
+               Mantén pulsado un equipo para arrastrarlo a una zona.
+             </p>
+             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 sm:gap-3 justify-center">
                {availableTeams
                  .slice() 
                  .sort((a, b) => a.seed - b.seed) 
@@ -630,11 +638,11 @@ const FantasyStagePicks: React.FC = () => {
          </div>
 
          {stageInfo.fantasy_status === 'OPEN' && (
-           <div className="mt-8 text-center">
+           <div className="mt-6 sm:mt-8 text-center">
              <button
                onClick={handleSubmitPicks}
                disabled={isLoading}
-               className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors disabled:opacity-50"
+               className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors disabled:opacity-50 text-fluid-base"
              >
                {isLoading ? 'Guardando...' : 'Guardar Picks'}
              </button>

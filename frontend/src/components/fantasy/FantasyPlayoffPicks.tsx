@@ -145,7 +145,7 @@ const FantasyPlayoffPicks: React.FC = () => {
   };
 
   const commonPageClasses = "min-h-[calc(100vh-4rem)] relative isolate bg-black text-white";
-  const commonContainerClasses = "relative z-10 container mx-auto p-4 sm:p-8 pt-8 text-white";
+  const commonContainerClasses = "relative z-10 container mx-auto p-3 sm:p-8 pt-6 sm:pt-8 text-white";
 
   if (isLoading && !playoffInfo) return (
     <div className={`${commonPageClasses} flex items-center justify-center`}>
@@ -252,41 +252,41 @@ const FantasyPlayoffPicks: React.FC = () => {
     <div className={commonPageClasses}>
       <GridPattern />
       <div className={commonContainerClasses.replace("p-4 text-white", "p-4")}>
-        <h1 className="text-3xl font-bold mb-2">Picks de Playoffs - {playoffInfo.tournament_name}</h1>
-        <p className="mb-1 text-neutral-400">Estado: <span className={`font-semibold ${playoffInfo.fantasy_status === 'OPEN' ? 'text-green-400' : 'text-red-400'}`}>{playoffInfo.fantasy_status}</span></p>
-        {playoffInfo.fantasy_status !== 'OPEN' && <p className="mb-4 text-sm text-yellow-400">Las elecciones para playoffs están cerradas.</p>}
+        <h1 className="text-fluid-2xl font-bold mb-2">Picks de Playoffs - {playoffInfo.tournament_name}</h1>
+        <p className="mb-1 text-neutral-400 text-fluid-sm">Estado: <span className={`font-semibold ${playoffInfo.fantasy_status === 'OPEN' ? 'text-green-400' : 'text-red-400'}`}>{playoffInfo.fantasy_status}</span></p>
+        {playoffInfo.fantasy_status !== 'OPEN' && <p className="mb-4 text-fluid-xs text-yellow-400">Las elecciones para playoffs están cerradas.</p>}
 
-        <div className="space-y-8 mt-6">
+        <div className="space-y-6 sm:space-y-8 mt-4 sm:mt-6">
           <div>
-            <h2 className="text-2xl font-semibold mb-3">Ganadores Cuartos de Final <span className="text-base text-neutral-400 font-normal">(Elige {playoffInfo.rules.num_quarter_final_winners})</span></h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <h2 className="text-fluid-xl font-semibold mb-3">Ganadores Cuartos de Final <span className="text-fluid-sm text-neutral-400 font-normal">(Elige {playoffInfo.rules.num_quarter_final_winners})</span></h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {playoffInfo.teams.map(team => renderTeamCard(team, 'qf', selectedQFWinners.has(team.id), () => handleTeamSelection(team.id, 'qf')))}
             </div>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">Ganadores Semifinales <span className="text-base text-neutral-400 font-normal">(Elige {playoffInfo.rules.num_semi_final_winners})</span></h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <h2 className="text-fluid-xl font-semibold mb-3">Ganadores Semifinales <span className="text-fluid-sm text-neutral-400 font-normal">(Elige {playoffInfo.rules.num_semi_final_winners})</span></h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {playoffInfo.teams.filter(t => selectedQFWinners.has(t.id)).map(team => renderTeamCard(team, 'sf', selectedSFWinners.has(team.id), () => handleTeamSelection(team.id, 'sf')))}
-              {playoffInfo.teams.filter(t => !selectedQFWinners.has(t.id)).map(team => renderTeamCard(team, 'sf', false, () => {})) /* Show disabled cards */}
+              {playoffInfo.teams.filter(t => !selectedQFWinners.has(t.id)).map(team => renderTeamCard(team, 'sf', false, () => {}))}
             </div>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">Campeón del Torneo <span className="text-base text-neutral-400 font-normal">(Elige {playoffInfo.rules.num_final_winner})</span></h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <h2 className="text-fluid-xl font-semibold mb-3">Campeón del Torneo <span className="text-fluid-sm text-neutral-400 font-normal">(Elige {playoffInfo.rules.num_final_winner})</span></h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {playoffInfo.teams.filter(t => selectedSFWinners.has(t.id)).map(team => renderTeamCard(team, 'final', selectedFinalWinner === team.id, () => handleTeamSelection(team.id, 'final')))}
-              {playoffInfo.teams.filter(t => !selectedSFWinners.has(t.id)).map(team => renderTeamCard(team, 'final', false, () => {})) /* Show disabled cards */}
+              {playoffInfo.teams.filter(t => !selectedSFWinners.has(t.id)).map(team => renderTeamCard(team, 'final', false, () => {}))}
             </div>
           </div>
         </div>
 
         {playoffInfo.fantasy_status === 'OPEN' && (
-          <div className="mt-8 text-center">
-            <button 
+          <div className="mt-6 sm:mt-8 text-center">
+            <button
               onClick={handleSubmitPicks}
               disabled={isLoading}
-              className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors disabled:opacity-50 text-fluid-base"
             >
               {isLoading ? 'Guardando...' : 'Guardar Picks de Playoffs'}
             </button>

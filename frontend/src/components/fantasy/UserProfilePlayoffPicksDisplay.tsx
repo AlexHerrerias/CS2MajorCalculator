@@ -37,7 +37,7 @@ const UserProfileTeamCard: React.FC<{ team: FantasyTeamDetail; categoryContext?:
       className={`p-2 rounded-lg shadow-md transition-all flex flex-col items-center justify-between relative 
                   bg-neutral-800 
                   ${borderColorClass}
-                  border w-32 h-36`}
+                  border w-28 h-32 sm:w-32 sm:h-36`}
       title={isImpossible ? `${team.name} (Rol imposible para este pick)` : team.name}
     >
       {isUnderdogBonus && !isImpossible && (
@@ -93,7 +93,7 @@ const UserProfilePlayoffPicksDisplay: React.FC<UserProfilePlayoffPicksDisplayPro
     if (!teams || teams.length === 0) {
       return (
         <div className="mb-8">
-          <h4 className="text-lg font-semibold text-neutral-100 mb-3">{title}:</h4>
+          <h4 className="text-fluid-base font-semibold text-neutral-100 mb-3">{title}:</h4>
           <p className="text-sm text-neutral-500 italic">Ninguna selección realizada para esta categoría.</p>
         </div>
       );
@@ -101,7 +101,7 @@ const UserProfilePlayoffPicksDisplay: React.FC<UserProfilePlayoffPicksDisplayPro
     return (
       <div className="mb-8">
         <h4 className="text-lg font-semibold text-neutral-100 mb-3">{title}:</h4>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-3 sm:gap-4 justify-center sm:justify-start">
           {teams.map(team => (
             // ya no se pasa isBonusContext, el componente lo toma de team.is_bonus_active
             <UserProfileTeamCard key={`${categoryTitle}-${team.id}`} team={team} categoryContext={categoryTitle} />
@@ -115,7 +115,7 @@ const UserProfilePlayoffPicksDisplay: React.FC<UserProfilePlayoffPicksDisplayPro
   // const rules = pickData.tournament_rules; // Suponiendo que las reglas vienen en pickData
 
   return (
-    <div className="bg-neutral-900/70 p-4 sm:p-6 rounded-lg shadow-xl my-4 border border-neutral-700/60">
+    <div className="bg-neutral-900/70 p-3 sm:p-6 rounded-lg shadow-xl my-4 border border-neutral-700/60">
       {renderTeamPicksList(pickData.quarter_final_winners_details, 'Ganadores Cuartos de Final')}
       {renderTeamPicksList(pickData.semi_final_winners_details, 'Ganadores Semifinales')}
       {pickData.final_winner_details ? 

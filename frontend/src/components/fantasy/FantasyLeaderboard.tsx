@@ -61,7 +61,7 @@ const FantasyLeaderboard: React.FC = () => {
   };
 
   const commonPageClasses = "min-h-[calc(100vh-4rem)] relative isolate bg-black text-white";
-  const commonContainerClasses = "relative z-10 container mx-auto p-4 sm:p-8 pt-8 text-white";
+  const commonContainerClasses = "relative z-10 container mx-auto p-3 sm:p-8 pt-6 sm:pt-8 text-white";
 
   if (isLoading && !leaderboardData) return (
     <div className={`${commonPageClasses} flex items-center justify-center`}>
@@ -85,15 +85,15 @@ const FantasyLeaderboard: React.FC = () => {
     <div className={commonPageClasses}>
       <GridPattern />
       <div className={commonContainerClasses.replace("p-4 text-white", "p-4")}>
-       <h1 className="text-3xl font-bold mb-6 text-center">Fantasy Leaderboard</h1>
-       
+       <h1 className="text-fluid-2xl font-bold mb-4 sm:mb-6 text-center">Fantasy Leaderboard</h1>
+
        <div className="overflow-x-auto bg-neutral-800 shadow-md rounded-lg">
         <table className="min-w-full table-auto">
           <thead className="bg-neutral-700">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-300 uppercase tracking-wider">Rank</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-300 uppercase tracking-wider">Usuario</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-neutral-300 uppercase tracking-wider">Puntos Totales</th>
+              <th className="px-3 sm:px-6 py-3 text-left text-fluid-xs font-medium text-neutral-300 uppercase tracking-wider">Rank</th>
+              <th className="px-3 sm:px-6 py-3 text-left text-fluid-xs font-medium text-neutral-300 uppercase tracking-wider">Usuario</th>
+              <th className="px-3 sm:px-6 py-3 text-right text-fluid-xs font-medium text-neutral-300 uppercase tracking-wider">Puntos</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-700">
@@ -113,12 +113,12 @@ const FantasyLeaderboard: React.FC = () => {
 
               return (
                 <tr key={userProfile?.user?.id || `unknown-user-${index}`} className={`hover:bg-neutral-750 ${actualRank <= 3 ? 'bg-primary-900/30' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <span className={`text-lg font-semibold ${actualRank <= 3 ? 'text-primary-400' : 'text-white'}`}>
                       #{actualRank}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <Link to={`/fantasy/profile/${userName}`} className="flex items-center group">
                       {profileImageUrl ? (
                         <img 
@@ -146,24 +146,28 @@ const FantasyLeaderboard: React.FC = () => {
         </table>
       </div>
 
-      <div className="mt-6 flex justify-between items-center">
-        <button 
-          onClick={handlePreviousPage} 
-          disabled={!leaderboardData.previous}
-          className="px-4 py-2 text-sm font-medium text-neutral-300 bg-neutral-700 hover:bg-neutral-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-        >
-          <ChevronLeftIconSVG className="w-5 h-5 mr-1" />
-          Anterior
-        </button>
-        <span className="text-sm text-neutral-400">Página {currentPage} de {leaderboardData.count > 0 ? Math.ceil(leaderboardData.count / leaderboardData.results.length) : 1}</span>
-        <button 
-          onClick={handleNextPage} 
-          disabled={!leaderboardData.next}
-          className="px-4 py-2 text-sm font-medium text-neutral-300 bg-neutral-700 hover:bg-neutral-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-        >
-          Siguiente
-          <ChevronRightIconSVG className="w-5 h-5 ml-1" />
-        </button>
+      <div className="mt-4 sm:mt-6 flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="flex justify-between sm:justify-start sm:gap-3">
+          <button
+            onClick={handlePreviousPage}
+            disabled={!leaderboardData.previous}
+            className="px-3 sm:px-4 py-2 text-fluid-sm font-medium text-neutral-300 bg-neutral-700 hover:bg-neutral-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+          >
+            <ChevronLeftIconSVG className="w-5 h-5 mr-1" />
+            Anterior
+          </button>
+          <button
+            onClick={handleNextPage}
+            disabled={!leaderboardData.next}
+            className="px-3 sm:px-4 py-2 text-fluid-sm font-medium text-neutral-300 bg-neutral-700 hover:bg-neutral-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+          >
+            Siguiente
+            <ChevronRightIconSVG className="w-5 h-5 ml-1" />
+          </button>
+        </div>
+        <span className="text-fluid-xs text-neutral-400 text-center sm:text-right">
+          Página {currentPage} de {leaderboardData.count > 0 ? Math.ceil(leaderboardData.count / leaderboardData.results.length) : 1}
+        </span>
       </div>
       </div>
     </div>

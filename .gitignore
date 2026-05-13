@@ -35,3 +35,13 @@ yarn-error.log*
 .env
 venv/
 env/
+.venv/
+
+# Django staticfiles output (collectstatic target)
+/staticfiles/
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+

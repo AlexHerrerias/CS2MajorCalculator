@@ -14,7 +14,6 @@ from django.core.management.base import BaseCommand
 
 from tournaments.liquipedia_service import bulk_update_matches_from_liquipedia
 
-
 logger = logging.getLogger(__name__)
 
 

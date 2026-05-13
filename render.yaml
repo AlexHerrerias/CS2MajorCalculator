@@ -1,0 +1,88 @@
+# Render Blueprint — provisions Django API, frontend static site and managed Postgres.
+# Apply from the Render dashboard with "New + → Blueprint" pointing at this repo.
+# Secrets marked `sync: false` are entered manually in the dashboard after the first
+# deploy so they never leave the platform.
+
+databases:
+  - name: cs2-major-db
+    plan: free
+    databaseName: cs2_major
+    user: cs2_major
+
+services:
+  # ────────────────────────────────────────────────────────────────────
+  # Django REST API (backend/)
+  # ────────────────────────────────────────────────────────────────────
+  - type: web
+    name: cs2-major-calculator-api
+    runtime: python
+    plan: free
+    region: oregon
+    healthCheckPath: /api/tournaments/
+    autoDeploy: true
+    buildCommand: |
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate --noinput
+    startCommand: gunicorn backend.wsgi:application --workers 2 --bind 0.0.0.0:$PORT --access-logfile - --error-logfile -
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DJANGO_SETTINGS_MODULE
+        value: backend.settings.prod
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cs2-major-db
+          property: connectionString
+      - key: LIQUIPEDIA_USER_AGENT
+        value: "CS2MajorCalculator/1.0 (https://github.com/AlexHerrerias/CS2MajorCalculator)"
+      # The following are set manually in the dashboard once the public URLs exist.
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      # Twitch OAuth credentials — register the callback at
+      # https://dev.twitch.tv/console/apps after the first deploy.
+      - key: TWITCH_CLIENT_ID
+        sync: false
+      - key: TWITCH_CLIENT_SECRET
+        sync: false
+      - key: TWITCH_REDIRECT_URI
+        sync: false
+
+  # ────────────────────────────────────────────────────────────────────
+  # React frontend served as a CDN-backed static site (frontend/)
+  # ────────────────────────────────────────────────────────────────────
+  - type: web
+    name: cs2-major-calculator-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: build
+    # Vite builds a SPA — rewrite every unknown path to index.html so client routing works.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: same-origin
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      # Point the SPA at the API service URL once it is deployed.
+      - key: VITE_API_BASE_URL
+        sync: false

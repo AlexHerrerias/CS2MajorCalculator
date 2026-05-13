@@ -1,17 +1,28 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.contrib.auth.models import User  # Para buscar por username
 from django.shortcuts import get_object_or_404
-from django.db.models import F # Para LeaderboardUserSerializer si es necesario ordenar por campos de User
-from django.contrib.auth.models import User # Para buscar por username
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import UserProfile, Stage, FantasyPhasePick, Team, StageTeam, Tournament, FantasyPlayoffPick
-from .serializers import (
-    FantasyPhasePickSerializer, FantasyPlayoffPickSerializer,
-    LeaderboardUserSerializer, PublicFantasyProfileSerializer, UserProfileSerializer,
-    TournamentFantasyPlayoffInfoSerializer, StageFantasyInfoSerializer
+from .models import (
+    FantasyPhasePick,
+    FantasyPlayoffPick,
+    Stage,
+    StageTeam,
+    Team,
+    Tournament,
+    UserProfile,
 )
+from .serializers import (
+    FantasyPhasePickSerializer,
+    FantasyPlayoffPickSerializer,
+    LeaderboardUserSerializer,
+    PublicFantasyProfileSerializer,
+    StageFantasyInfoSerializer,
+    UserProfileSerializer,
+)
+
 
 class ManageFantasyPhasePicksView(APIView):
     permission_classes = [IsAuthenticated]

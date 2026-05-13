@@ -1,5 +1,6 @@
 /// <reference types="vitest" />
-import { defineConfig } from "vite";
+// Use vitest's defineConfig so the `test` field is recognised by TS.
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({

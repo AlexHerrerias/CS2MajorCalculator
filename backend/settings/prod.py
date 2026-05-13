@@ -3,13 +3,17 @@
 from .base import *  # noqa: F401, F403
 from .base import MIDDLEWARE, env
 
-
 DEBUG = False
 
 
 DATABASES = {
     "default": env.db("DATABASE_URL"),
 }
+
+
+# Always permit Render-assigned hostnames so the first deploy passes its health
+# check before the operator narrows DJANGO_ALLOWED_HOSTS to the real domain.
+ALLOWED_HOSTS = list({*env("DJANGO_ALLOWED_HOSTS", default=[]), ".onrender.com"})
 
 
 MIDDLEWARE = [

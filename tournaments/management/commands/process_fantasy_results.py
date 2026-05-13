@@ -1,6 +1,8 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
+
+from tournaments.fantasy_logic import finalize_fantasy_playoff_picks, finalize_fantasy_stage_picks
 from tournaments.models import Stage, Tournament
-from tournaments.fantasy_logic import finalize_fantasy_stage_picks, finalize_fantasy_playoff_picks
+
 
 class Command(BaseCommand):
     help = 'Finaliza los picks de fantasy y calcula los puntos para una fase o torneo.'

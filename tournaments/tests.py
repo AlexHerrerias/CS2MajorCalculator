@@ -1,11 +1,30 @@
+import json
 from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import UserProfile
+from .fantasy_logic import calculate_phase_pick_points, calculate_playoff_pick_points
+from .liquipedia_service import (
+    parse_match_response,
+    update_single_match_from_liquipedia,
+)
+from .models import (
+    FantasyPhasePick,
+    FantasyPlayoffPick,
+    Match,
+    Stage,
+    StageTeam,
+    Team,
+    Tournament,
+    UserProfile,
+)
 
+
+# ---------------------------------------------------------------------------
+# Twitch OAuth (PR #1)
+# ---------------------------------------------------------------------------
 
 @override_settings(
     TWITCH_CLIENT_ID="test-client-id",
@@ -84,3 +103,362 @@ class TwitchOAuthCallbackTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(User.objects.filter(username="oldviewer").count(), 1)
         self.assertEqual(UserProfile.objects.filter(twitch_id="999").count(), 1)
+
+
+# ---------------------------------------------------------------------------
+# Liquipedia service (PR #2)
+# ---------------------------------------------------------------------------
+
+class LiquipediaParserTest(TestCase):
+    """parse_match_response must handle FINISHED/LIVE/PENDING and empty payloads."""
+
+    def test_finished_match_with_winner_and_maps(self):
+        raw = {
+            "cargoquery": [{
+                "title": {
+                    "PageName": "PGL/2024/StageA/Round1_Match1",
+                    "Opponent1": "Team Spirit",
+                    "Opponent2": "FaZe",
+                    "Score": "2:0",
+                    "Winner": "Team Spirit",
+                    "Map1Score": "13:9",
+                    "Map2Score": "13:7",
+                }
+            }]
+        }
+        result = parse_match_response(raw)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["status"], "FINISHED")
+        self.assertEqual(result["team1_name"], "Team Spirit")
+        self.assertEqual(result["team2_name"], "FaZe")
+        self.assertEqual(result["team1_score"], 2)
+        self.assertEqual(result["team2_score"], 0)
+        self.assertEqual(result["winner_name"], "Team Spirit")
+        self.assertEqual(result["map_scores"][0], (13, 9))
+        self.assertEqual(result["map_scores"][1], (13, 7))
+        self.assertIsNone(result["map_scores"][2])
+
+    def test_pending_match_without_scores(self):
+        raw = {
+            "cargoquery": [{
+                "title": {
+                    "Opponent1": "G2",
+                    "Opponent2": "NAVI",
+                    "Score": "",
+                    "Winner": "",
+                }
+            }]
+        }
+        result = parse_match_response(raw)
+        self.assertEqual(result["status"], "PENDING")
+        self.assertEqual(result["team1_score"], 0)
+        self.assertEqual(result["team2_score"], 0)
+        self.assertIsNone(result["winner_name"])
+
+    def test_live_match_with_partial_score(self):
+        raw = {
+            "cargoquery": [{
+                "title": {
+                    "Opponent1": "Vitality",
+                    "Opponent2": "MOUZ",
+                    "Score": "1:1",
+                    "Winner": "",
+                    "Map1Score": "13:10",
+                    "Map2Score": "8:13",
+                }
+            }]
+        }
+        result = parse_match_response(raw)
+        self.assertEqual(result["status"], "LIVE")
+        self.assertEqual(result["team1_score"], 1)
+        self.assertEqual(result["team2_score"], 1)
+        self.assertIsNone(result["winner_name"])
+
+    def test_empty_or_malformed_payload_returns_none(self):
+        self.assertIsNone(parse_match_response(None))
+        self.assertIsNone(parse_match_response({}))
+        self.assertIsNone(parse_match_response({"cargoquery": []}))
+        self.assertIsNone(parse_match_response({"cargoquery": [{}]}))
+
+
+class MatchUpdateIdempotencyTest(TestCase):
+    """A second call with the same upstream data must be a no-op (returns False)."""
+
+    def setUp(self):
+        self.tournament = Tournament.objects.create(
+            name="Idempotency Major",
+            slug="idempotency-major",
+            start_date="2024-01-01",
+            end_date="2024-01-10",
+            location="Online",
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Swiss A",
+            type="SWISS",
+            order=1,
+        )
+        self.team1 = Team.objects.create(name="Team Spirit", region="EU")
+        self.team2 = Team.objects.create(name="FaZe", region="EU")
+        self.match = Match.objects.create(
+            stage=self.stage,
+            round_number=1,
+            team1=self.team1,
+            team2=self.team2,
+            format="BO3",
+            status="PENDING",
+            liquipedia_page_name="PGL/2024/Round1_Match1",
+        )
+
+    @patch("tournaments.liquipedia_service.fetch_match_from_liquipedia")
+    def test_idempotent_second_call_returns_false(self, mock_fetch):
+        payload = {
+            "page_name": "PGL/2024/Round1_Match1",
+            "status": "FINISHED",
+            "team1_name": "Team Spirit",
+            "team2_name": "FaZe",
+            "team1_score": 2,
+            "team2_score": 0,
+            "winner_name": "Team Spirit",
+            "map_scores": [(13, 9), (13, 7), None],
+        }
+        mock_fetch.return_value = payload
+
+        first = update_single_match_from_liquipedia(self.match.id)
+        self.assertTrue(first)
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, "FINISHED")
+        self.assertEqual(self.match.team1_score, 2)
+        self.assertEqual(self.match.team2_score, 0)
+        self.assertEqual(self.match.winner_id, self.team1.id)
+        self.assertEqual(self.match.map1_team1_score, 13)
+        self.assertEqual(self.match.map2_team1_score, 13)
+
+        second = update_single_match_from_liquipedia(self.match.id)
+        self.assertFalse(second)
+
+    @patch("tournaments.liquipedia_service.fetch_match_from_liquipedia")
+    def test_no_page_name_skips_fetch(self, mock_fetch):
+        self.match.liquipedia_page_name = ""
+        self.match.save()
+        result = update_single_match_from_liquipedia(self.match.id)
+        self.assertFalse(result)
+        mock_fetch.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Fantasy points calculation (PR #2)
+# ---------------------------------------------------------------------------
+
+class FantasyPointsStageTest(TestCase):
+    """One realistic Swiss scenario for calculate_phase_pick_points."""
+
+    def setUp(self):
+        self.tournament = Tournament.objects.create(
+            name="Stage Points Major",
+            slug="stage-points-major",
+            start_date="2024-01-01",
+            end_date="2024-01-10",
+            location="Online",
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Stage A",
+            type="SWISS",
+            order=1,
+        )
+        self.teams = []
+        for seed in range(1, 17):
+            team = Team.objects.create(name=f"Team {seed}", region="EU")
+            self.teams.append(team)
+            if seed in (1, 2):
+                wins, losses = 3, 0
+            elif seed in (11, 12):
+                wins, losses = 3, 1
+            elif seed in (13, 14):
+                wins, losses = 0, 3
+            else:
+                wins, losses = 1, 1
+            StageTeam.objects.create(
+                stage=self.stage,
+                team=team,
+                initial_seed=seed,
+                wins=wins,
+                losses=losses,
+            )
+
+        self.user = User.objects.create_user(username="alice")
+        self.profile = UserProfile.objects.create(user=self.user)
+        self.pick = FantasyPhasePick.objects.create(
+            user_profile=self.profile, stage=self.stage
+        )
+        self.pick.teams_3_0.set([self.teams[0], self.teams[1]])
+        self.pick.teams_advance.set([self.teams[10], self.teams[11]])
+        self.pick.teams_0_3.set([self.teams[12], self.teams[13]])
+
+    def test_phase_points_breakdown(self):
+        ok = calculate_phase_pick_points(self.pick.id)
+        self.assertTrue(ok)
+
+        self.pick.refresh_from_db()
+        # 2 correct 3-0 picks (seeds 1,2 — no bonus): 2 * 15 = 30
+        # 2 correct advance picks (seeds 11,12 — in worst-8 underdog bonus): 2 * 5 * 1.5 = 15
+        # 2 correct 0-3 picks (seeds 13,14 — no bonus): 2 * 10 = 20
+        # Total: 65
+        self.assertEqual(self.pick.points_earned, 65)
+        self.assertTrue(self.pick.is_finalized)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.total_fantasy_points, 65)
+
+        self.assertIn(str(self.teams[0].id), self.pick.team_points_breakdown)
+        self.assertIn(str(self.teams[10].id), self.pick.team_points_breakdown)
+        self.assertIn(str(self.teams[12].id), self.pick.team_points_breakdown)
+
+
+class FantasyPointsPlayoffTest(TestCase):
+    """Partial-correct playoff scenario for calculate_playoff_pick_points."""
+
+    def setUp(self):
+        self.tournament = Tournament.objects.create(
+            name="Playoff Points Major",
+            slug="playoff-points-major",
+            start_date="2024-01-01",
+            end_date="2024-01-10",
+            location="Online",
+        )
+        self.playoff_stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Playoffs",
+            type="PLAYOFF",
+            order=99,
+            fantasy_status="FINALIZED",
+        )
+        self.teams = [Team.objects.create(name=f"T{i}", region="EU") for i in range(8)]
+
+        for a, b in [(0, 1), (2, 3), (4, 5), (6, 7)]:
+            Match.objects.create(
+                stage=self.playoff_stage,
+                round_number=1,
+                team1=self.teams[a],
+                team2=self.teams[b],
+                winner=self.teams[a],
+                format="BO3",
+                status="FINISHED",
+            )
+        Match.objects.create(
+            stage=self.playoff_stage,
+            round_number=2,
+            team1=self.teams[0],
+            team2=self.teams[2],
+            winner=self.teams[0],
+            format="BO3",
+            status="FINISHED",
+        )
+        Match.objects.create(
+            stage=self.playoff_stage,
+            round_number=2,
+            team1=self.teams[4],
+            team2=self.teams[6],
+            winner=self.teams[4],
+            format="BO3",
+            status="FINISHED",
+        )
+        Match.objects.create(
+            stage=self.playoff_stage,
+            round_number=3,
+            team1=self.teams[0],
+            team2=self.teams[4],
+            winner=self.teams[0],
+            format="BO5",
+            status="FINISHED",
+        )
+
+        self.user = User.objects.create_user(username="bob")
+        self.profile = UserProfile.objects.create(user=self.user)
+        self.pick = FantasyPlayoffPick.objects.create(
+            user_profile=self.profile,
+            tournament=self.tournament,
+            final_winner=self.teams[0],
+        )
+        # QF picks: 2 correct (T0, T2), 2 wrong (T1, T3). SF picks: 1 correct (T0), 1 wrong (T6).
+        self.pick.quarter_final_winners.set(
+            [self.teams[0], self.teams[2], self.teams[1], self.teams[3]]
+        )
+        self.pick.semi_final_winners.set([self.teams[0], self.teams[6]])
+
+    def test_playoff_points_breakdown(self):
+        ok = calculate_playoff_pick_points(self.pick.id)
+        self.assertTrue(ok)
+
+        self.pick.refresh_from_db()
+        # 2 correct QF * 20 = 40
+        # 1 correct SF * 35 = 35
+        # 1 correct Final * 50 = 50
+        # Total: 125
+        self.assertEqual(self.pick.points_earned, 125)
+        self.assertTrue(self.pick.is_finalized)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.total_fantasy_points, 125)
+
+
+# ---------------------------------------------------------------------------
+# Match result recalculation (PR #2)
+# ---------------------------------------------------------------------------
+
+class MatchResultRecalcTest(TestCase):
+    """Posting a match result must recompute wins/losses for affected StageTeams."""
+
+    def setUp(self):
+        self.tournament = Tournament.objects.create(
+            name="Recalc Test",
+            slug="recalc-test",
+            start_date="2024-01-01",
+            end_date="2024-01-10",
+            location="Online",
+            is_live=True,
+        )
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name="Stage",
+            type="SWISS",
+            order=1,
+        )
+        self.team_a = Team.objects.create(name="Alpha", region="EU")
+        self.team_b = Team.objects.create(name="Bravo", region="EU")
+        StageTeam.objects.create(stage=self.stage, team=self.team_a, initial_seed=1)
+        StageTeam.objects.create(stage=self.stage, team=self.team_b, initial_seed=2)
+        self.match = Match.objects.create(
+            stage=self.stage,
+            round_number=1,
+            team1=self.team_a,
+            team2=self.team_b,
+            format="BO3",
+            status="PENDING",
+        )
+
+    def test_post_winner_recalculates_wins_and_losses(self):
+        url = reverse("update-match")
+        payload = {
+            "tournamentSlug": "recalc-test",
+            "currentStageIdFromPage": "phase1",
+            "roundIndex": 0,
+            "matchIndex": 0,
+            "winnerId": self.team_a.id,
+        }
+        response = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.match.refresh_from_db()
+        self.assertEqual(self.match.status, "FINISHED")
+        self.assertEqual(self.match.winner_id, self.team_a.id)
+
+        st_a = StageTeam.objects.get(stage=self.stage, team=self.team_a)
+        st_b = StageTeam.objects.get(stage=self.stage, team=self.team_b)
+        self.assertEqual(st_a.wins, 1)
+        self.assertEqual(st_a.losses, 0)
+        self.assertEqual(st_b.wins, 0)
+        self.assertEqual(st_b.losses, 1)

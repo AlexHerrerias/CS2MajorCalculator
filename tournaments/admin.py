@@ -1,9 +1,9 @@
 from django.contrib import admin
 from .models import (
-    Tournament, Team, Stage, StageTeam, Match, HLTVUpdateSettings,
+    Tournament, Team, Stage, StageTeam, Match, MatchUpdateSettings,
     UserProfile, FantasyPhasePick, FantasyPlayoffPick
 )
-from .fantasy_logic import finalize_fantasy_stage_picks, finalize_fantasy_playoff_picks # Importar ambas
+from .fantasy_logic import finalize_fantasy_stage_picks, finalize_fantasy_playoff_picks
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
@@ -31,11 +31,11 @@ class TeamAdmin(admin.ModelAdmin):
 
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'stage', 'round_number', 'status', 'winner', 'hltv_match_id')
+    list_display = ('__str__', 'stage', 'round_number', 'status', 'winner', 'liquipedia_page_name', 'hltv_match_id')
     list_filter = ('stage', 'status', 'round_number', 'format')
-    search_fields = ('team1__name', 'team2__name', 'hltv_match_id')
-    readonly_fields = ('created_at', 'updated_at', 'last_hltv_update')
-    actions = ['mark_as_pending', 'mark_as_live', 'mark_as_finished', 'update_from_hltv_action']
+    search_fields = ('team1__name', 'team2__name', 'liquipedia_page_name', 'hltv_match_id')
+    readonly_fields = ('created_at', 'updated_at', 'last_external_update')
+    actions = ['mark_as_pending', 'mark_as_live', 'mark_as_finished', 'update_from_liquipedia_action']
     fieldsets = (
         (None, {
             'fields': ('stage', 'round_number', ('team1', 'team2'), 'winner')
@@ -45,11 +45,15 @@ class MatchAdmin(admin.ModelAdmin):
                        ('map1_team1_score', 'map1_team2_score'),
                        ('map2_team1_score', 'map2_team2_score'),
                        ('map3_team1_score', 'map3_team2_score'),
-                       'is_elimination', 'is_advancement', 'hltv_match_id'),
+                       'is_elimination', 'is_advancement'),
             'classes': ('collapse',)
         }),
+        ('Identificadores externos', {
+            'fields': ('liquipedia_page_name', 'hltv_match_id'),
+            'description': "liquipedia_page_name se usa para el fetch automático desde Liquipedia. hltv_match_id queda solo por compatibilidad con datos legacy.",
+        }),
         ('Timestamps', {
-            'fields': ('created_at', 'updated_at', 'last_hltv_update'),
+            'fields': ('created_at', 'updated_at', 'last_external_update'),
             'classes': ('collapse',),
         }),
     )
@@ -73,47 +77,63 @@ class MatchAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated_count} partidos marcados como Finalizados.")
     mark_as_finished.short_description = "Marcar seleccionados como: Finalizado"
 
-    def update_from_hltv_action(self, request, queryset):
-        from .hltv_service import update_single_match_from_hltv
-        
+    def update_from_liquipedia_action(self, request, queryset):
+        from .liquipedia_service import update_single_match_from_liquipedia
+
         updated_matches_count = 0
         attempted_matches_count = 0
-        
+
         for match_obj in queryset:
             attempted_matches_count += 1
-            if match_obj.hltv_match_id:
-                if match_obj.status == 'FINISHED':
-                    self.message_user(request, f"Partido {match_obj} ya está FINALIZADO. Omitido.", level='info')
-                    continue
-                try:
-                    if update_single_match_from_hltv(match_obj.id): # Pasar match_obj.id
-                        updated_matches_count += 1
-                except Exception as e:
-                    self.message_user(request, f"Error actualizando {match_obj} desde HLTV: {e}", level='error')
-            else:
-                self.message_user(request, f"Partido {match_obj} no tiene HLTV Match ID. Omitido.", level='warning')
-        
+            if not match_obj.liquipedia_page_name:
+                self.message_user(
+                    request,
+                    f"Partido {match_obj} no tiene liquipedia_page_name. Omitido.",
+                    level='warning',
+                )
+                continue
+            if match_obj.status == 'FINISHED':
+                self.message_user(
+                    request,
+                    f"Partido {match_obj} ya está FINALIZADO. Omitido.",
+                    level='info',
+                )
+                continue
+            try:
+                if update_single_match_from_liquipedia(match_obj.id):
+                    updated_matches_count += 1
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"Error actualizando {match_obj} desde Liquipedia: {e}",
+                    level='error',
+                )
+
         if updated_matches_count > 0:
-            self.message_user(request, f"{updated_matches_count} de {attempted_matches_count} partidos seleccionados fueron procesados/actualizados desde HLTV.")
+            self.message_user(
+                request,
+                f"{updated_matches_count} de {attempted_matches_count} partidos seleccionados se actualizaron desde Liquipedia.",
+            )
         elif attempted_matches_count > 0:
-            self.message_user(request, f"Ninguno de los {attempted_matches_count} partidos seleccionados pudo ser actualizado desde HLTV (verifique logs o si ya estaban finalizados).", level='warning')
+            self.message_user(
+                request,
+                f"Ninguno de los {attempted_matches_count} partidos seleccionados se pudo actualizar (revisa logs o si ya estaban finalizados).",
+                level='warning',
+            )
         else:
             self.message_user(request, "No se seleccionaron partidos para actualizar.", level='info')
-            
-    update_from_hltv_action.short_description = "Actualizar seleccionados desde HLTV (individual)"
 
-@admin.register(HLTVUpdateSettings)
-class HLTVUpdateSettingsAdmin(admin.ModelAdmin):
-    list_display = ('id', 'is_active', 'use_real_api', 'updated_at')
+    update_from_liquipedia_action.short_description = "Actualizar seleccionados desde Liquipedia"
+
+@admin.register(MatchUpdateSettings)
+class MatchUpdateSettingsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'is_active', 'use_liquipedia_api', 'updated_at')
     readonly_fields = ('updated_at',)
-    search_fields = ('team__name',)
 
     def has_add_permission(self, request):
-        # Prevenir la creación de múltiples instancias desde el admin
-        return not HLTVUpdateSettings.objects.exists()
+        return not MatchUpdateSettings.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
-        # Prevenir la eliminación de la instancia única
         return False
 
 @admin.register(UserProfile)

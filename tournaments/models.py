@@ -63,6 +63,16 @@ class Team(models.Model):
     hltv_team_id = models.IntegerField(unique=True, null=True, blank=True, help_text="ID único del equipo en HLTV.org, si está disponible.")
     region = models.CharField(max_length=2, choices=REGION_CHOICES)
     logo = models.URLField(blank=True)
+    world_ranking = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Ranking mundial del equipo (1 = mejor). Lo actualiza el operador a mano desde el admin.",
+    )
+    world_ranking_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Última vez que el operador actualizó world_ranking. Se rellena automáticamente al guardar desde el admin.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

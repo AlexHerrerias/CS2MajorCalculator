@@ -462,3 +462,50 @@ class MatchResultRecalcTest(TestCase):
         self.assertEqual(st_a.losses, 0)
         self.assertEqual(st_b.wins, 0)
         self.assertEqual(st_b.losses, 1)
+
+
+# ---------------------------------------------------------------------------
+# Team world ranking (PR #3)
+# ---------------------------------------------------------------------------
+
+class TeamWorldRankingAdminTest(TestCase):
+    """world_ranking is operator-managed; TeamAdmin.save_model must stamp the timestamp."""
+
+    def setUp(self):
+        from django.contrib.admin.sites import AdminSite
+        from .admin import TeamAdmin
+
+        self.admin = TeamAdmin(Team, AdminSite())
+        self.team = Team.objects.create(name="Spirit", region="EU")
+
+    def test_save_model_sets_timestamp_when_ranking_changes(self):
+        class FakeForm:
+            changed_data = ["world_ranking"]
+
+        self.assertIsNone(self.team.world_ranking_updated_at)
+        self.team.world_ranking = 5
+        self.admin.save_model(request=None, obj=self.team, form=FakeForm(), change=True)
+
+        self.team.refresh_from_db()
+        self.assertEqual(self.team.world_ranking, 5)
+        self.assertIsNotNone(self.team.world_ranking_updated_at)
+
+    def test_save_model_preserves_timestamp_when_ranking_unchanged(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        original = timezone.now() - timedelta(days=1)
+        self.team.world_ranking = 10
+        self.team.world_ranking_updated_at = original
+        self.team.save()
+
+        class FakeForm:
+            changed_data = ["name"]
+
+        self.team.name = "Spirit Renamed"
+        self.admin.save_model(request=None, obj=self.team, form=FakeForm(), change=True)
+
+        self.team.refresh_from_db()
+        # auto_now=False on this field, so a save with the same value should not bump it.
+        self.assertEqual(self.team.world_ranking_updated_at, original)
+        self.assertEqual(self.team.name, "Spirit Renamed")

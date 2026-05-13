@@ -449,7 +449,7 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
             // Calcular Buchholz tras la ronda anterior
             const buchholzBreakdown = previousOpponents.reduce((total, { contribution }) => total + contribution, 0);
             return (
-              <table className="text-left w-full min-w-[300px]">
+              <table className="text-left w-full min-w-[240px] sm:min-w-[300px] max-w-[calc(100vw-2rem)]">
                 <tbody>
                   <tr>
                     <td colSpan={3} className="py-2 px-4"><b>Initial Seeding</b></td>
@@ -572,17 +572,13 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
                     return null; 
                   }
                   // Determinar las clases de la cuadrícula basadas en el índice de la ronda
-                  let gridClasses = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"; // Default
-                  if (roundIndex === 3) { // Ronda 4
-                    // Volver a grid con 3 columnas en lg y con gap
-                    gridClasses = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"; 
-                  } else if (roundIndex === 4) { // Ronda 5
-                    // Volver a grid con 3 columnas en lg y con gap
-                    gridClasses = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"; 
+                  let gridClasses = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4";
+                  if (roundIndex === 3 || roundIndex === 4) {
+                    gridClasses = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4";
                   }
-                  
+
                   return (
-                    <div className={`${gridClasses} p-4 bg-neutral-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-neutral-700/50`}>
+                    <div className={`${gridClasses} p-2 sm:p-4 bg-neutral-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-neutral-700/50`}>
                       {sortedMatches.map((match, matchIndex) => {
                         const originalMatchIndex = round.matches.indexOf(match);
                         const team1 = getTeamById(match.team1Id);
@@ -729,7 +725,7 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
                             key={originalMatchIndex}
                             className="bg-neutral-900/60 backdrop-blur-md rounded-lg shadow-xl border border-neutral-700/50 flex flex-col overflow-hidden"
                           >
-                            <div className="flex flex-row items-center justify-around px-4 pt-3 pb-2 sm:px-5">
+                            <div className="flex flex-row items-center justify-around px-2 pt-2 pb-2 sm:px-5 sm:pt-3">
                               <div className="flex flex-col items-center min-w-[70px] sm:min-w-[80px]">
                                 <span className="text-xs text-neutral-400 mb-1">Seed</span>
                                 <span
@@ -761,12 +757,12 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
                                 </span>
                               </div>
                             </div>
-                            <div className="flex flex-row items-center justify-around px-4 py-4 sm:px-5 sm:py-5 gap-3 sm:gap-4">
+                            <div className="flex flex-row items-center justify-around px-2 py-3 sm:px-5 sm:py-5 gap-2 sm:gap-4">
                               <div className="flex-1 flex flex-col items-center">
                                 <img
                                   src={`/team-logos/${team1.name.toLowerCase().replace(/\s+/g, '')}.png`}
                                   alt={team1.name}
-                                  className={`w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-lg bg-neutral-800/70 cursor-pointer transition-all duration-200 ${imageBorderClassTeam1} ${match.status === 'FINISHED' && !isTeam1Winner ? 'opacity-50 grayscale' : ''}`}
+                                  className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain rounded-lg bg-neutral-800/70 cursor-pointer transition-all duration-200 ${imageBorderClassTeam1} ${match.status === 'FINISHED' && !isTeam1Winner ? 'opacity-50 grayscale' : ''}`}
                                   onClick={() => handleTeamClick(roundIndex, originalMatchIndex, team1.id)}
                                   onError={(e) => {(e.target as HTMLImageElement).src = '/team-logos/default.png'}}
                                 />
@@ -775,13 +771,13 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
                                 <img
                                   src={`/team-logos/${team2.name.toLowerCase().replace(/\s+/g, '')}.png`}
                                   alt={team2.name}
-                                  className={`w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-lg bg-neutral-800/70 cursor-pointer transition-all duration-200 ${imageBorderClassTeam2} ${match.status === 'FINISHED' && !isTeam2Winner ? 'opacity-50 grayscale' : ''}`}
+                                  className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain rounded-lg bg-neutral-800/70 cursor-pointer transition-all duration-200 ${imageBorderClassTeam2} ${match.status === 'FINISHED' && !isTeam2Winner ? 'opacity-50 grayscale' : ''}`}
                                   onClick={() => handleTeamClick(roundIndex, originalMatchIndex, team2.id)}
                                   onError={(e) => {(e.target as HTMLImageElement).src = '/team-logos/default.png'}}
                                 />
                               </div>
                             </div>
-                            <div className="flex flex-row items-end justify-between px-4 pb-3 sm:px-5 gap-3 sm:gap-4 mt-auto">
+                            <div className="flex flex-row items-end justify-between px-2 pb-2 sm:px-5 sm:pb-3 gap-2 sm:gap-4 mt-auto">
                               {renderMatchScores()}
                             </div>
                           </div>
@@ -803,7 +799,7 @@ const BuchholzRounds: React.FC<BuchholzRoundsProps> = ({
               Equipos Clasificados a la Siguiente Fase
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 bg-neutral-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-neutral-700/50">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 p-2 sm:p-4 bg-neutral-800/30 backdrop-blur-sm rounded-lg shadow-lg border border-neutral-700/50">
             {qualifiedTeams.map(team => (
               <div 
                 key={team.id}

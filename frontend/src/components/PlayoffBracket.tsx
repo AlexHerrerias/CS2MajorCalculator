@@ -143,25 +143,25 @@ const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ teams, rounds, onMatchR
     const logoUrl = team ? `/team-logos/${team.name.toLowerCase().replace(/\s+/g, '')}.png` : '/team-logos/default.png';
     const teamName = team ? team.name : 'TBD';
 
-    let teamClasses = 'flex items-center justify-center p-3 h-32 w-full rounded bg-neutral-800 hover:bg-neutral-700 cursor-pointer transition-all group';
-    let logoClasses = 'h-16 w-16 object-contain group-hover:scale-105 transition-transform';
-    let nameClasses = 'text-base text-neutral-400 mt-2 truncate group-hover:text-neutral-200';
+    let teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-neutral-800 hover:bg-neutral-700 cursor-pointer transition-all group';
+    let logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain group-hover:scale-105 transition-transform';
+    let nameClasses = 'text-fluid-sm text-neutral-400 mt-2 truncate group-hover:text-neutral-200';
 
     if (matchStatus === 'FINISHED') {
       teamClasses = onClick ? teamClasses.replace('cursor-pointer', 'cursor-default') : teamClasses;
       if (isWinner) {
-        teamClasses = 'flex items-center justify-center p-3 h-32 w-full rounded bg-primary-600 border-2 border-primary-400 cursor-default transition-all group';
-        logoClasses = 'h-16 w-16 object-contain scale-105 brightness-110';
-        nameClasses = 'text-base text-white mt-2 truncate';
+        teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-primary-600 border-2 border-primary-400 cursor-default transition-all group';
+        logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain scale-105 brightness-110';
+        nameClasses = 'text-fluid-sm text-white mt-2 truncate';
       } else {
-        teamClasses = 'flex items-center justify-center p-3 h-32 w-full rounded bg-neutral-800 opacity-60 grayscale cursor-default transition-all group';
-        logoClasses = 'h-16 w-16 object-contain';
-        nameClasses = 'text-base text-neutral-500 mt-2 truncate';
+        teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-neutral-800 opacity-60 grayscale cursor-default transition-all group';
+        logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain';
+        nameClasses = 'text-fluid-sm text-neutral-500 mt-2 truncate';
       }
     } else if (isWinner) { // Ganador simulado
-        teamClasses = 'flex items-center justify-center p-3 h-32 w-full rounded bg-primary-700 hover:bg-primary-600 border-2 border-primary-500 cursor-pointer transition-all group';
-        logoClasses = 'h-16 w-16 object-contain scale-105 group-hover:scale-110 transition-transform';
-        nameClasses = 'text-base text-primary-200 mt-2 truncate group-hover:text-white';
+        teamClasses = 'flex items-center justify-center p-2 sm:p-3 h-24 sm:h-28 md:h-32 w-full rounded bg-primary-700 hover:bg-primary-600 border-2 border-primary-500 cursor-pointer transition-all group';
+        logoClasses = 'h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain scale-105 group-hover:scale-110 transition-transform';
+        nameClasses = 'text-fluid-sm text-primary-200 mt-2 truncate group-hover:text-white';
     }
     
     return (
@@ -193,7 +193,7 @@ const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ teams, rounds, onMatchR
         ref={el => {
           if (el) matchElementsRef.current[matchKey] = { ...matchElementsRef.current[matchKey], element: el };
         }}
-        className={`w-48 flex flex-col gap-0.5 bg-neutral-900/70 rounded-md shadow-xl border border-neutral-700/50 overflow-hidden ${className}`}
+        className={`w-32 sm:w-40 md:w-48 flex flex-col gap-0.5 bg-neutral-900/70 rounded-md shadow-xl border border-neutral-700/50 overflow-hidden ${className}`}
       >
         <TeamDisplay 
           teamId={match?.team1Id} 
@@ -214,56 +214,56 @@ const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ teams, rounds, onMatchR
   const champion = finalMatch?.winner ? getTeamById(finalMatch.winner) : null;
 
   return (
-    <div ref={bracketRef} className="relative flex justify-center items-start p-4 md:p-8 min-h-[900px] text-white overflow-x-auto select-none">
-      <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
+    <div ref={bracketRef} className="relative flex justify-center items-start p-3 sm:p-4 md:p-8 min-h-[600px] md:min-h-[900px] text-white overflow-x-auto select-none">
+      <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 hidden md:block">
         {svgLines}
       </svg>
-      
-      <div className="relative z-10 flex space-x-6 md:space-x-12 items-stretch">
+
+      <div className="relative z-10 flex space-x-3 sm:space-x-6 md:space-x-12 items-stretch">
         {/* Columna Cuartos de Final Izquierda */}
-        <div className="flex flex-col justify-around items-center space-y-10 pt-10">
-          <h3 className="text-lg font-semibold text-neutral-400 absolute top-0">Cuartos (A)</h3>
+        <div className="flex flex-col justify-around items-center space-y-6 sm:space-y-10 pt-6 sm:pt-10">
+          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-0">Cuartos (A)</h3>
           <MatchDisplay match={quarterfinals[0]} roundIndex={0} matchIndex={0} />
           <MatchDisplay match={quarterfinals[1]} roundIndex={0} matchIndex={1} />
         </div>
 
         {/* Columna Semifinal Izquierda */}
-        <div className="flex flex-col justify-center items-center pt-40">
-          <h3 className="text-lg font-semibold text-neutral-400 absolute top-32">Semifinal (A)</h3>
+        <div className="flex flex-col justify-center items-center pt-24 sm:pt-40">
+          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-20 sm:top-32">Semifinal (A)</h3>
           <MatchDisplay match={semifinals[0]} roundIndex={1} matchIndex={0} />
         </div>
 
         {/* Columna Final */}
-        <div className="flex flex-col items-center space-y-4 pt-20 md:pt-48">
-          <h3 className="text-xl font-bold text-primary-400 mb-2 absolute top-12 md:top-40">FINAL</h3>
+        <div className="flex flex-col items-center space-y-4 pt-12 sm:pt-20 md:pt-48">
+          <h3 className="text-fluid-lg font-bold text-primary-400 mb-2 absolute top-8 sm:top-12 md:top-40">FINAL</h3>
           {finalMatch && <MatchDisplay match={finalMatch} roundIndex={2} matchIndex={0} />}
-          <div className="mt-16 text-center p-6 bg-neutral-800 rounded-xl shadow-2xl border-2 border-yellow-400/80 w-64 min-h-[250px] flex flex-col justify-center">
-            <h4 className="text-3xl font-bold text-yellow-400 mb-3">CAMPEÓN</h4>
+          <div className="mt-10 sm:mt-16 text-center p-4 sm:p-6 bg-neutral-800 rounded-xl shadow-2xl border-2 border-yellow-400/80 w-44 sm:w-56 md:w-64 min-h-[180px] sm:min-h-[220px] md:min-h-[250px] flex flex-col justify-center">
+            <h4 className="text-fluid-xl font-bold text-yellow-400 mb-3">CAMPEÓN</h4>
             {champion ? (
               <>
-                <img 
-                  src={`/team-logos/${champion.name.toLowerCase().replace(/\s+/g, '')}.png`} 
-                  alt={champion.name} 
-                  className="w-30 h-36 mx-auto my-4 object-contain filter drop-shadow(0 0 10px rgba(250, 204, 21, 0.6))"
+                <img
+                  src={`/team-logos/${champion.name.toLowerCase().replace(/\s+/g, '')}.png`}
+                  alt={champion.name}
+                  className="w-20 h-24 sm:w-24 sm:h-28 md:w-30 md:h-36 mx-auto my-4 object-contain filter drop-shadow(0 0 10px rgba(250, 204, 21, 0.6))"
                   onError={(e) => {(e.target as HTMLImageElement).src = '/team-logos/default.png'}}
                 />
-                <p className="text-4xl font-semibold text-white">{champion.name}</p>
+                <p className="text-fluid-2xl font-semibold text-white truncate">{champion.name}</p>
               </>
             ) : (
-              <p className="text-4xl font-semibold text-neutral-500 h-36 flex items-center justify-center">TBD</p>
+              <p className="text-fluid-2xl font-semibold text-neutral-500 h-24 md:h-36 flex items-center justify-center">TBD</p>
             )}
           </div>
         </div>
 
         {/* Columna Semifinal Derecha */}
-        <div className="flex flex-col justify-center items-center pt-40">
-          <h3 className="text-lg font-semibold text-neutral-400 absolute top-32">Semifinal (B)</h3>
+        <div className="flex flex-col justify-center items-center pt-24 sm:pt-40">
+          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-20 sm:top-32">Semifinal (B)</h3>
           <MatchDisplay match={semifinals[1]} roundIndex={1} matchIndex={1} />
         </div>
 
         {/* Columna Cuartos de Final Derecha */}
-        <div className="flex flex-col justify-around items-center space-y-10 pt-10">
-          <h3 className="text-lg font-semibold text-neutral-400 absolute top-0">Cuartos (B)</h3>
+        <div className="flex flex-col justify-around items-center space-y-6 sm:space-y-10 pt-6 sm:pt-10">
+          <h3 className="text-fluid-base font-semibold text-neutral-400 absolute top-0">Cuartos (B)</h3>
           <MatchDisplay match={quarterfinals[2]} roundIndex={0} matchIndex={2} />
           <MatchDisplay match={quarterfinals[3]} roundIndex={0} matchIndex={3} />
         </div>

@@ -145,26 +145,27 @@ class Match(models.Model):
     format = models.CharField(max_length=3, choices=MATCH_FORMATS)
     is_elimination = models.BooleanField(default=False)
     is_advancement = models.BooleanField(default=False)
-    hltv_match_id = models.IntegerField(null=True, blank=True, help_text="ID numérico del partido en HLTV.org")
+    hltv_match_id = models.IntegerField(null=True, blank=True, help_text="(Legacy) ID numérico del partido en HLTV.org. Conservado por datos previos; nuevas integraciones usan liquipedia_page_name.")
+    liquipedia_page_name = models.CharField(max_length=255, null=True, blank=True, help_text="Page name del partido en Liquipedia (ej: 'MajorChampionship/2024/Stage_A/Round_1_Match_1'). Usado por el servicio Liquipedia para fetch de resultados.")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING', help_text="Estado actual del partido")
-    last_hltv_update = models.DateTimeField(null=True, blank=True, help_text="Última vez que se verificaron los datos con HLTV")
+    last_external_update = models.DateTimeField(null=True, blank=True, help_text="Última vez que se actualizaron los datos desde una fuente externa (Liquipedia).")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.team1.name} vs {self.team2.name} - Round {self.round_number} ({self.status})"
 
-class HLTVUpdateSettings(models.Model):
-    is_active = models.BooleanField(default=False, help_text="Activar la actualización automática de partidos desde HLTV.org")
-    use_real_api = models.BooleanField(default=False, help_text="Utilizar la API real de HLTV en lugar de datos simulados. Requiere que la librería HLTV esté instalada y configurada.")
+class MatchUpdateSettings(models.Model):
+    is_active = models.BooleanField(default=False, help_text="Activar la actualización automática de resultados de partidos desde Liquipedia.")
+    use_liquipedia_api = models.BooleanField(default=False, help_text="Cuando is_active está ON: si True, llama a Liquipedia Cargo API; si False, el operador edita resultados manualmente en el admin.")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Configuración de Actualización HLTV"
-        verbose_name_plural = "Configuraciones de Actualización HLTV"
+        verbose_name = "Match Update Settings"
+        verbose_name_plural = "Match Update Settings"
 
     def __str__(self):
-        return f"Actualización HLTV: {'Activada' if self.is_active else 'Desactivada'}"
+        return f"Match update: {'active' if self.is_active else 'inactive'}"
 
     def save(self, *args, **kwargs):
         self.pk = 1
@@ -172,7 +173,7 @@ class HLTVUpdateSettings(models.Model):
 
     @classmethod
     def load(cls):
-        obj, created = cls.objects.get_or_create(pk=1)
+        obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
 # --- Nuevos Modelos para Fantasy League ---

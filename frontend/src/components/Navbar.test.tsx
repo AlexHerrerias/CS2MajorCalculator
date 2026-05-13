@@ -20,17 +20,23 @@ describe("Navbar", () => {
       </MemoryRouter>,
     );
 
+  // The hamburger button uses a visually-hidden `<span class="sr-only">` for its
+  // label, which the accessibility tree exposes via the button's accessible name —
+  // so we query by `role: button` + name regex rather than by label.
+  const openMenuButton = () =>
+    screen.getByRole("button", { name: /Abrir menú principal/i });
+
   it("renders the Fantasy link, the login affordance and the hamburger button", () => {
     renderNavbar();
     expect(screen.getByRole("link", { name: "Fantasy" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Abrir menú principal/i)).toBeInTheDocument();
+    expect(openMenuButton()).toBeInTheDocument();
     expect(screen.getAllByText(/Login con Twitch/i).length).toBeGreaterThan(0);
   });
 
   it("opens the mobile slide-in panel when the hamburger is clicked", async () => {
     renderNavbar();
-    await userEvent.setup().click(screen.getByLabelText(/Abrir menú principal/i));
+    await userEvent.setup().click(openMenuButton());
     expect(screen.getByText("Menú")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Cerrar menú/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cerrar menú/i })).toBeInTheDocument();
   });
 });

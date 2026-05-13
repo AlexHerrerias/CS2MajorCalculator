@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import PlayoffBracket from "./PlayoffBracket";
-import type { Team, Round } from "../types/hltvTypes";
+import type { Round, Team } from "../types/hltvTypes";
 
 const teams: Team[] = [
   { id: 1, name: "Alpha", logo: "", seed: 1, region: "EU", wins: 0, losses: 0, buchholzScore: 0 },
@@ -28,10 +28,14 @@ const rounds: Round[] = [
 ];
 
 describe("PlayoffBracket", () => {
-  it("renders the FINAL label and champion placeholder without crashing", () => {
+  it("renders round headers and the champion placeholder without crashing", () => {
     render(<PlayoffBracket teams={teams} rounds={rounds} onMatchResult={() => {}} />);
-    expect(screen.getByText("FINAL")).toBeInTheDocument();
-    expect(screen.getByText("CAMPEÓN")).toBeInTheDocument();
-    expect(screen.getByText("TBD")).toBeInTheDocument();
+    // Section headers appear in both the mobile stack and the desktop columns,
+    // so the test only asserts that they are present somewhere on the page.
+    expect(screen.getAllByText(/Cuartos/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Semis|Semifinales/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Final/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Campeón/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Por decidir/i).length).toBeGreaterThan(0);
   });
 });

@@ -110,6 +110,4 @@ def twitch_callback(request):
     # Iniciar sesión para el usuario en Django
     login(request, user)
 
-    # Redirigir al frontend (ej. a la página principal o al dashboard del fantasy)
-    # Deberás cambiar '/' por la URL de tu frontend a la que quieres redirigir
-    return redirect('http://localhost:3000/') # O la URL de tu página de Fantasy 
+    return redirect(settings.FRONTEND_URL)
